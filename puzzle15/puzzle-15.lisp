@@ -11,7 +11,9 @@
 (defstruct state
 	board
 	clear-tile  ; position of the cleared tile
-	previous-play)
+	previous-play
+	number-plays
+	out-o-place)
 
 ; make the inverse play easy to access
 (defparameter *invert-table* (make-hash-table :test #'equalp))
@@ -36,6 +38,8 @@
 			  ((equalp move "U") (setf (state-clear-tile state) (swap board ct (list (1- (car ct)) (cadr ct)))))
 			  ((equalp move "D") (setf (state-clear-tile state) (swap board ct (list (1+ (car ct)) (cadr ct))))))
 	(setf (state-previous-play state) move)
+	(incf (state-number-plays state))
+	(setf (state-out-o-place state) (out-place-heuristic state))
 	state))
 
 (defun possible-moves (state)
@@ -60,7 +64,9 @@
 	"Creates a state"
 	(make-state :board tab
 				:clear-tile (find-empty-tile tab)
-				:previous-play NIL))
+				:previous-play NIL
+				:number-plays 0
+				:out-o-place nil))
 
 ;; -----------------------------
 ;; OPERATOR AND GOAL FUNCTION
@@ -72,7 +78,9 @@
 		(loop for move in (possible-moves state) do
 			(push (move-piece (make-state :board (copy-array (state-board state))
 										  :clear-tile (state-clear-tile state)
-										  :previous-play (state-previous-play state))
+										  :previous-play (state-previous-play state)
+										  :number-plays (state-number-plays state)
+										  :out-o-place (state-out-o-place state))
 							  move)
 				  gen-states))
 	gen-states))
@@ -85,8 +93,18 @@
 ;; HEURISTICS AND COST FUNCTIONS
 ;; -----------------------------
 
-;;  -- these are not the funcitons you are looking for
+(defun out-place-heuristic (state)
+	"This heuristic checks how many nodes are out of place compared to the goal state"
+	(let ((dims (array-dimensions (state-board state)))
+		  (out 0))
+		(dotimes (i (first dims)) (dotimes (j (second dims)) do
+			(if (not (equalp (aref COMPLETE-BOARD i j) (aref (state-board state) i j)))
+				(incf out))))
+	out))
 
+(defun cost-function (state)
+	"This function gives the cost of the state"
+	(state-number-plays state))
 
 ;; -----------------------------
 ;; SOLVE FUNCTION
@@ -96,12 +114,17 @@
 	(procura (cria-problema (create-initial-state table)
 							(list #'gen-successors)
 							:objectivo? #'is-goal-state
-							:custo NIL
-							:heuristica NIL)
+							:custo #'cost-function
+							:heuristica #'out-place-heuristic)
 			 search-type))
 
 ;;;;;;;;;;; running tests
-(solve-problem (make-array '(4 4) :initial-contents '((1 2 3 4) (5 6 7 8) (13 9 10 11) (14 nil 15 12))) "profundidade")
+;(trace move-piece)
+;(trace swap)
+;(trace gen-successors)
+;(trace cost-function)
+;(solve-problem (make-array '(4 4) :initial-contents '((1 2 3 4) (5 6 7 8) (13 9 10 11) (14 nil 15 12))) "profundidade")
+(solve-problem (make-array '(4 4) :initial-contents '((1 2 3 4) (5 6 7 8) (13 9 10 11) (14 nil 15 12))) "a*")
 
 ;(find (make-array 3 :initial-contents '(1 2 3)) (list (make-array 3 :initial-contents '(2 4 5)) (make-array 3 :initial-contents '(1 2 3)) (make-array 3 :initial-contents '(1 3 4))) :test #'equalp)
 
