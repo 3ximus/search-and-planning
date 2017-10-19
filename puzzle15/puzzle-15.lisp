@@ -12,8 +12,7 @@
 	board
 	clear-tile  ; position of the cleared tile
 	previous-play
-	number-plays
-	out-o-place)
+	number-plays)
 
 ; make the inverse play easy to access
 (defparameter *invert-table* (make-hash-table :test #'equalp))
@@ -30,8 +29,8 @@
 	"Swap two array elements, returns p2"
 	(rotatef (aref board (car p1)(cadr p1)) (aref board (car p2)(cadr p2))) p2)
 
-(defun move-piece (state move)
-	"Move piece in a given direction"
+(defun move-tile (state move)
+	"Move tile in a given direction"
 	(let ((board (state-board state)) (ct (state-clear-tile state)))
 		(cond ((equalp move "L") (setf (state-clear-tile state) (swap board ct (list (car ct) (1- (cadr ct))))))
 			  ((equalp move "R") (setf (state-clear-tile state) (swap board ct (list (car ct) (1+ (cadr ct))))))
@@ -39,7 +38,6 @@
 			  ((equalp move "D") (setf (state-clear-tile state) (swap board ct (list (1+ (car ct)) (cadr ct))))))
 	(setf (state-previous-play state) move)
 	(incf (state-number-plays state))
-	(setf (state-out-o-place state) (out-place-heuristic state))
 	state))
 
 (defun possible-moves (state)
@@ -65,8 +63,7 @@
 	(make-state :board tab
 				:clear-tile (find-empty-tile tab)
 				:previous-play NIL
-				:number-plays 0
-				:out-o-place nil))
+				:number-plays 0))
 
 ;; -----------------------------
 ;; OPERATOR AND GOAL FUNCTION
@@ -76,11 +73,10 @@
 	"Generates the successor states of a given state"
 	(let ((gen-states NIL))
 		(loop for move in (possible-moves state) do
-			(push (move-piece (make-state :board (copy-array (state-board state))
+			(push (move-tile (make-state :board (copy-array (state-board state))
 										  :clear-tile (state-clear-tile state)
 										  :previous-play (state-previous-play state)
-										  :number-plays (state-number-plays state)
-										  :out-o-place (state-out-o-place state))
+										  :number-plays (state-number-plays state))
 							  move)
 				  gen-states))
 	gen-states))
@@ -94,7 +90,7 @@
 ;; -----------------------------
 
 (defun out-place-heuristic (state)
-	"This heuristic checks how many nodes are out of place compared to the goal state"
+	"This heuristic checks how many tiles are out of place compared to the goal state"
 	(let ((dims (array-dimensions (state-board state)))
 		  (out 0))
 		(dotimes (i (first dims)) (dotimes (j (second dims)) do
@@ -119,12 +115,6 @@
 			 search-type))
 
 ;;;;;;;;;;; running tests
-;(trace move-piece)
-;(trace swap)
-;(trace gen-successors)
-;(trace cost-function)
 ;(solve-problem (make-array '(4 4) :initial-contents '((1 2 3 4) (5 6 7 8) (13 9 10 11) (14 nil 15 12))) "profundidade")
 (solve-problem (make-array '(4 4) :initial-contents '((1 2 3 4) (5 6 7 8) (13 9 10 11) (14 nil 15 12))) "a*")
-
-;(find (make-array 3 :initial-contents '(1 2 3)) (list (make-array 3 :initial-contents '(2 4 5)) (make-array 3 :initial-contents '(1 2 3)) (make-array 3 :initial-contents '(1 3 4))) :test #'equalp)
 
