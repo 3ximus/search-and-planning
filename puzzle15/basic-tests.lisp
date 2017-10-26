@@ -2,11 +2,11 @@
 (in-package :user)
 
 
-(defun basic-checks-of-20-queens-result (res)
-  (cond ((not (arrayp res)) (error "The result must be an array!"))
-	((not (equalp '(20 20) (array-dimensions res)))
-	 (error "The array dimensions are wrong!"))
-	(T "Passed basic tests.")))
+;(defun basic-checks-of-20-queens-result (res)
+;  (cond ((not (arrayp res)) (error "The result must be an array!"))
+;	((not (equalp '(20 20) (array-dimensions res)))
+;	 (error "The array dimensions are wrong!"))
+;	(T "Passed basic tests.")))
 
 
 (defun basic-checks-of-15-puzzle-result (res)
