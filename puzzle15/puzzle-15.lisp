@@ -1,5 +1,6 @@
 ;;; Procura e planeamento
 ;;; 15 Puzzle Problem
+;;; Fabio Almeida - 76959
 
 (load "procura")
 
@@ -117,10 +118,4 @@
 		(dolist (s statelist)
 			(setf boardlist (append boardlist (list (state-board s)))))
 		boardlist))
-
-
-
-;;;;;;;;;;; running tests
-;(solve-problem (make-array '(4 4) :initial-contents '((1 2 3 4) (5 6 7 8) (13 9 10 11) (14 nil 15 12))) "profundidade")
-(solve-problem (make-array '(4 4) :initial-contents '((1 2 3 4) (5 6 7 8) (13 9 10 11) (14 nil 15 12))) "a*")
 
