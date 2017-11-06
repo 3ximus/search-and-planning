@@ -11,6 +11,11 @@
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"taskName": "clisp tests",
+			"type": "shell",
+			"command": "clisp -i -q test_vrp.lisp"
 		}
 	]
 }
