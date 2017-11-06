@@ -24,6 +24,10 @@
 ;; SIMPLE FUNCTIONS
 ;; -----------------------------
 
+(defun distance (locationA locationB)
+	"Calculates Euclidean distance between 2 locations"
+	(sqrt (+ (expt (- (cadr locationB) (cadr locationA)) 2) (expt (- (car (last locationB)) (car (last locationA))) 2))))
+
 ;; -----------------------------
 ;; OPERATOR AND GOAL FUNCTION
 ;; -----------------------------
@@ -46,6 +50,6 @@
 ;; SOLVE FUNCTION
 ;; -----------------------------
 
-(defun vrp (probleml search-strategy)
+(defun vrp (problem search-strategy)
 	"Solve instances of the Vehicle Routing Problem"
 	)
