@@ -21,9 +21,13 @@
 	customer.demand)      ; ordered list of demands (each demand has 2 elements (location-id demand-integer)) first element is the depot with demand value at zero
 
 (defstruct state
-	vehicle-status        ; array of lists containing the location history of each vehicle (current location being the first element)
-	unvisited-locations
-	number-unvisited-locations)     ; number of unvisited cities
+	vehicle-status                ; array of lists containing the location history of each vehicle (current location being the first element)
+	unvisited-locations           ; list of unvisited locations
+	number-unvisited-locations    ; number of unvisited cities
+	remaining-tour-length
+	remaining-capacity)
+
+(defvar *vrp-data*)
 
 ;; -----------------------------
 ;; BASIC FUNCTIONS
@@ -39,18 +43,40 @@
 
 (defun create-initial-state (problem)
 	"Create a problem from a vrp struct"
-	(make-state :vehicle-status
-					(make-array (vrp-vehicles.number problem) :initial-contents
-						(let ((lst ())) ; each vehicle starts at the depot
-							(dotimes (i (vrp-vehicles.number problem))
-								(setf lst (cons (list (car (cadr (vrp-customer.locations problem)))) lst)))
-						lst))
-				:unvisited-locations (rest (cadr (vrp-customer.locations problem)))
-				:number-unvisited-locations (length (cadr (vrp-customer.locations problem)))))
+	; FIXME this doesnt work probably...
+	(let ((*vrp-data* #S(vrp :name (vrp-name problem) ; convert locations and demands to array
+						:vehicle.capacity (vrp-vehicle.capacity problem)
+						:vehicles.number (vrp-vehicles.number problem)
+						:max.tour.length (vrp-max.tour.length problem)
+						:customer.locations (make-array (length (cadr (vrp-customer.locations problem)))
+							:initial-contents (vrp-customer.locations problem)
+						:customer.demand (make-array (length (cadr (vrp-customer-demand problem)))
+							:initial-contents (vrp-customer.demand problem)))))
+		(initial-state (make-state :vehicle-status
+						(make-array (vrp-vehicles.number problem) :initial-contents
+							(let ((lst ())) ; make array with list of locations, starting at the depot
+								(dotimes (i (vrp-vehicles.number problem)) (setf lst (cons 0 lst)))
+							lst))
+						:unvisited-locations (rest (cadr (vrp-customer.locations problem)))
+						:number-unvisited-locations (length (cadr (vrp-customer.locations problem))))))
+						:remaining-tour-length (make-array (vrp-vehicles.number problem) :initial-contents
+							(let ((lst ())) ; make array with remaining tour length for each vehicle
+								(dotimes (i (vrp-vehicles.number problem))
+									(setf lst (cons (vrp-max.tour.length problem) lst)))
+							lst))
+						:remaining-capacity (make-array (vrp-vehicles.number problem) :initial-contents
+							(let ((lst ())) ; make array with remaining cargo for each vehicle
+								(dotimes (i (vrp-vehicles.number problem))
+									(setf lst (cons (vrp-vehicle.capacity problem) lst)))
+							lst))
+	initial-state))
 
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
-	NIL)
+	nil)
+;	(dolist (loc (state-unvisited-locations state))
+;		(loop over vehicles last current positions)
+;		(find minimum (distance loc vehicle-current-position))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
