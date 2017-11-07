@@ -2,7 +2,7 @@
 
 (load "vrp")
 
-(vrp #S(vrp :name "CMT1"
+(write (vrp #S(vrp :name "CMT1"
 			:vehicle.capacity 160
 			:vehicles.number 5
 			:max.tour.length 150
@@ -29,4 +29,4 @@
 								(31 11) (32 12) (33 23) (34 26) (35 17) (36 6) (37 9)
 								(38 15) (39 14) (40 7) (41 27) (42 13) (43 11) (44 16)
 								(45 10) (46 5) (47 25) (48 17) (49 18) (50 10)))
-	"a*.best.heuristic")
+	"a*.best.heuristic"))
