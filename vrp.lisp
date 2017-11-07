@@ -22,7 +22,8 @@
 
 (defstruct state
 	vehicle-status        ; array of lists containing the location history of each vehicle (current location being the first element)
-	number-unvisited-cities)     ; number of unvisited cities
+	unvisited-locations
+	number-unvisited-locations)     ; number of unvisited cities
 
 ;; -----------------------------
 ;; BASIC FUNCTIONS
@@ -44,7 +45,8 @@
 							(dotimes (i (vrp-vehicles.number problem))
 								(setf lst (cons (list (car (cadr (vrp-customer.locations problem)))) lst)))
 						lst))
-				:number-unvisited-cities (length (cadr (vrp-customer.locations problem)))))
+				:unvisited-locations (rest (cadr (vrp-customer.locations problem)))
+				:number-unvisited-locations (length (cadr (vrp-customer.locations problem)))))
 
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
@@ -52,7 +54,7 @@
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
-	(equalp (state-number-unvisited-cities state) 0))
+	(equalp (state-number-unvisited-locations state) 0))
 
 ;; -----------------------------
 ;; HEURISTICS AND COST FUNCTIONS
