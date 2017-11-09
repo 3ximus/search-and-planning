@@ -43,6 +43,16 @@
 		(remhash location new-hash)
 	new-hash))
 
+(defun get-current-vehicle (state)
+	(let ((nr-vehicles (length (state-vehicle-routes state))))
+		(loop for i from 0 to nr-vehicles 
+			do (if (not (and (> (length (vehicle-route state i)) 1) 	; has traveled
+							 (equalp (car (vehicle-route state i)) 0))) ; is not back at the depot
+					(return i)))))
+
+(defun get-unvisited-customer-ids (state)
+	(loop for key being the hash-keys of (state-unvisited-locations state) collect key))
+
 ;; -----------------------------
 ;; GLOBAL
 ;; -----------------------------
@@ -113,17 +123,6 @@
 		:remaining-tour-length 		(make-list (vrp-vehicles.number problem) :initial-element (vrp-max.tour.length  problem))
 		:remaining-capacity    		(make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem))))
 
-(defun get-current-vehicle (state)
-	(let ((nr-vehicles (length (state-vehicle-routes state))))
-		(loop for i from 0 to nr-vehicles 
-			do (if (not (and (> (length (vehicle-route state i)) 1) 	; has traveled
-							 (equalp (car (vehicle-route state i)) 0))) ; is not back at the depot
-					(return i)))))
-
-(defun get-unvisited-customer-ids (state)
-	(loop for key being the hash-keys of (state-unvisited-locations state) collect key))
-
-
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
 	(let* ((cv (get-current-vehicle state)) 
@@ -140,7 +139,6 @@
 								  	  :remaining-tour-length (change-list-copy (state-remaining-tour-length state) cv rem-tour-len)
 									  :remaining-capacity (change-list-copy (state-remaining-capacity state) cv rem-capacity))
 					generated-states)))))))
-	; generated-states))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
