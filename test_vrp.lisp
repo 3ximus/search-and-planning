@@ -30,8 +30,18 @@
 												(38 15) (39 14) (40 7) (41 27) (42 13) (43 11) (44 16)
 												(45 10) (46 5) (47 25) (48 17) (49 18) (50 10))))
 
+(setf *customerHash* (makeCustomerHash (vrp-customer.locations *vrp-prob*) (vrp-customer.demand *vrp-prob*)))
+
+(format T "~%~%~%")
+(format T "id: ~X location: ~X demand: ~D~%" 0 (getCustomerLocation *customerHash* 0) (getCustomerDemand *customerHash* 0)) 
+(format T "id: ~X location: ~X demand: ~D~%" 1 (getCustomerLocation *customerHash* 1) (getCustomerDemand *customerHash* 1))
+(format T "id: ~X location: ~X demand: ~D~%" 2 (getCustomerLocation *customerHash* 2) (getCustomerDemand *customerHash* 2))
+(format T "id: ~X location: ~X demand: ~D~%" 3 (getCustomerLocation *customerHash* 3) (getCustomerDemand *customerHash* 3))
+(format T "id: ~X location: ~X demand: ~D~%" 4 (getCustomerLocation *customerHash* 4) (getCustomerDemand *customerHash* 4))
+(format T "id: ~X location: ~X demand: ~D~%" 5 (getCustomerLocation *customerHash* 5) (getCustomerDemand *customerHash* 5))
+(format T "id: ~X location: ~X demand: ~D~%" 6 (getCustomerLocation *customerHash* 6) (getCustomerDemand *customerHash* 6))
 
 ; Testing create init state
-(format T "~%~%~%initial-state:~%~X~%~%~%" (create-initial-state *vrp-prob*))
-(trace create-initial-state)
-(write (vrp *vrp-prob* "a*.best.heuristic"))
+; (format T "~%~%~%initial-state:~%~X~%~%~%" (create-initial-state *vrp-prob*))
+; (trace create-initial-state)
+; (write (vrp *vrp-prob* "a*.best.heuristic"))
