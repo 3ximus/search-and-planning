@@ -46,7 +46,7 @@
 			  :vehicle.capacity   (vrp-vehicle.capacity vrp-prob)
 			  :vehicles.number 	  (vrp-vehicles.number vrp-prob)
 			  :max.tour.length 	  (vrp-max.tour.length vrp-prob)
-			  :customer.locations (lst-to-array (vrp-customer.locations vrp-prob)) 
+			  :customer.locations (lst-to-array (vrp-customer.locations vrp-prob))
 			  :customer.demand 	  (lst-to-array (vrp-customer.demand vrp-prob))))
 
 ;; -----------------------------
@@ -57,22 +57,22 @@
 	"Create a problem from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem)) ;setf de var global??? e necessario?
 	; FIXME this doesnt work probably... CHECK IF RESULTS ARE CORRECT
-  	(make-state  
+  	(make-state
 		:vehicle-status
 			(make-array (vrp-vehicles.number problem) :initial-contents
 				(let ((lst ())) ; make array with list of locations, starting at the depot
-					(dotimes (i (vrp-vehicles.number problem)) 
+					(dotimes (i (vrp-vehicles.number problem))
 						(setf lst (cons 0 lst)))
 				lst))
-		:unvisited-locations (rest (cadr (vrp-customer.locations problem)))
-		:number-unvisited-locations (length (cadr (vrp-customer.locations problem)))
-		:remaining-tour-length 
+		:unvisited-locations (rest (vrp-customer.locations problem))
+		:number-unvisited-locations (length (vrp-customer.locations problem))
+		:remaining-tour-length
 		 	(make-array (vrp-vehicles.number problem) :initial-contents
 				(let ((lst ())) ; make array with remaining tour length for each vehicle
 					(dotimes (i (vrp-vehicles.number problem))
 						(setf lst (cons (vrp-max.tour.length problem) lst)))
 				lst))
-		:remaining-capacity 
+		:remaining-capacity
 			(make-array (vrp-vehicles.number problem) :initial-contents
 				(let ((lst ())) ; make array with remaining cargo for each vehicle
 					(dotimes (i (vrp-vehicles.number problem))
