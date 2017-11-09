@@ -28,26 +28,58 @@
 	remaining-capacity)
 
 (defvar *vrp-data*)
+(defvar *customerHash*)
 
 ;; -----------------------------
 ;; BASIC FUNCTIONS
 ;; -----------------------------
 
-(defun distance (locationA locationB) ; locationA and locationB are locations from vrp struct -> (id x y)
+(defun distance (locationA locationB) ; locationA and locationB are locations from customerHash -> (x y)
 	"Calculates Euclidean distance between 2 locations"
-	(sqrt (+ (expt (- (cadr locationB) (cadr locationA)) 2) (expt (- (car (last locationB)) (car (last locationA))) 2))))
+	(sqrt (+ (expt (- (cadr locationB) (cadr locationA)) 2) (expt (- (car locationB) (car locationA)) 2))))
 
 (defun lst-to-array (lst)
 	(let ((lst-len (length lst)))
 	(make-array (list lst-len) :initial-contents lst)))
 
 (defun copy-vrp (vrp-prob)
-	(make-vrp :name 			  (vrp-name vrp-prob) ; convert locations and demands to array
+	(make-vrp :name 			  (vrp-name vrp-prob)
 			  :vehicle.capacity   (vrp-vehicle.capacity vrp-prob)
 			  :vehicles.number 	  (vrp-vehicles.number vrp-prob)
-			  :max.tour.length 	  (vrp-max.tour.length vrp-prob)
-			  :customer.locations (lst-to-array (vrp-customer.locations vrp-prob))
-			  :customer.demand 	  (lst-to-array (vrp-customer.demand vrp-prob))))
+			  :max.tour.length 	  (vrp-max.tour.length vrp-prob)))
+			  ;:customer.locations (lst-to-array (vrp-customer.locations vrp-prob)) ; TODO remove now that we have hash tables?
+			  ;:customer.demand 	  (lst-to-array (vrp-customer.demand vrp-prob)))) ; TODO remove now that we have hash tables?
+
+(defun change-array-copy (arr pos new-val)
+	"Change a pos (position) in arr (array) to new-val (new value) and return a new array copy with that change"
+	(let ((new-array (copy-array arr)))
+		(setf (aref new-array pos) new-val)
+	new-array))
+
+;; Each item of the list, must have the "id" as the first value -- i.e (id value1 value2 ...)
+(defun lst-to-hash (lst)
+	(let ((hash (make-hash-table :test #'equalp)))
+		(dolist (lst-item lst hash)
+			(setf (gethash (car lst-item) hash) (rest lst-item)))))
+
+;; Each item of the list, must have the "id" as the first value -- i.e (id value)
+(defun add-lst-to-hash (lst hash)
+	(dolist (lst-item lst hash)
+		(setf (gethash (car lst-item) hash) (cons (gethash (car lst-item) hash) (second lst-item)))))
+
+;; Hash functions
+(defun makeCustomerHash (locations demands)
+	(let ((customerHash (lst-to-hash locations)))
+		(add-lst-to-hash demands customerHash)))
+
+(defun getCustomerLocation(hash id)
+	(car (gethash id hash)))
+
+(defun getCustomerDemand(hash id)
+	(cdr (gethash id hash)))
+
+(defun removeCustomerInfo (id hash)
+	(remhash id hash))
 
 ;; -----------------------------
 ;; OPERATOR AND GOAL FUNCTION
@@ -56,6 +88,7 @@
 (defun create-initial-state (problem)
 	"Create a problem from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
+	(setf *customerHash* (makeCustomerHash (vrp-customer.locations problem) (vrp-customer.demand problem)))
   	(make-state
 		:vehicle-routes
 			(make-array (vrp-vehicles.number problem) :initial-contents
@@ -63,7 +96,7 @@
 					(dotimes (i (vrp-vehicles.number problem))
 						(setf lst (cons (list 0) lst)))
 				lst))
-		:unvisited-locations (rest (vrp-customer.locations problem))
+		:unvisited-locations (rest (vrp-customer.locations problem)); PLACEHOLDER replace with hash table
 		:number-unvisited-locations (length (vrp-customer.locations problem))
 		:remaining-tour-length
 		 	(make-array (vrp-vehicles.number problem) :initial-contents
@@ -80,25 +113,22 @@
 
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
-	(let ((current-vehicle
+	(let* ((current-vehicle
 			(loop for i from 0 to (vrp-vehicles.number *vrp-data*) do
 				(if (not (and (> (length (aref (state-vehicle-routes state) i)) 1) ; has traveled
 							  (equalp (car (aref (state-vehicle-routes state) i)) 0))) ; is not back at the depot
 					(return i))))
+		  (current-vehicle-location (aref (state-vehicle-routes state) current-vehicle))
 		  (generated-states NIL))
-	(dolist (location (state-unvisited-locations))
-		(cons (make-state :vehicle-routes (setf (aref (copy-array (state-vehicle-routes state)) current-vehicle)
-												(cons (car location) (aref (copy-array (state-vehicle-routes state)) current-vehicle)))
-						  :unvisited-locations NIL ; PLACEHOLDER replace with hash table removal of "location"
+	(dolist (location (state-unvisited-locations)) ; PLACEHOLDER location will be an integer and we iterate over hash keys
+		(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) current-vehicle (cons location (aref (state-vehicle-routes state) current-vehicle)))
+						  :unvisited-locations NIL ; PLACEHOLDER replace with hash table removal of "location" for unvisited locations
 						  :number-unvisited-locations (1- (state-number-unvisited-locations))
-						  :remaining-tour-length (setf (aref (copy-array (state-vehicle-routes state)) current-vehicle)
-						  							   (- (aref (copy-array (state-vehicle-routes state)) (distance PLACEHOLDER))))
-						  :remaining-capacity (setf (aref (copy-array (state-vehicle-routes state)) current-vehicle)
-						  							(- (aref (copy-array (state-vehicle-routes state)) 0))) ; PLACEHOLDER replace zero with demand value of current location
-			)
+						  :remaining-tour-length (change-array-copy (state-remaining-tour-length state) current-vehicle
+						  							(- (aref (state-remaining-tour-length state) current-vehicle) (distance (getCustomerLocation current-vehicle-location) (getCustomerLocation location))))
+						  :remaining-capacity (change-array-copy (state-remaining-capacity state) current-vehicle (- (aref (state-remaining-capacity state) current-vehicle) (getCustomerDemand location))))
 			generated-states))))
 
-0
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
 	(equalp (state-number-unvisited-locations state) 0))
