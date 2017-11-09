@@ -30,13 +30,13 @@
 ;; STATE ACCESSORS -------------------------------------
 
 (defun vehicle-route (state vehicle)
-	(nth vehicle (state-vehicle-routes state)))
+	(aref (state-vehicle-routes state) vehicle))
 
 (defun remaining-capacity (state vehicle)
-	(nth vehicle (state-remaining-capacity state)))
+	(aref (state-remaining-capacity state) vehicle))
 
 (defun remaining-length (state vehicle)
-	(nth vehicle (state-remaining-tour-length state)))
+	(aref (state-remaining-tour-length state) vehicle))
 
 (defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
 	(let ((new-hash (copy-hash-table (state-unvisited-locations state))))
@@ -97,11 +97,11 @@
 		(maphash #'(lambda(key value) (setf (gethash key new-table) value)) table)
 	new-table))
 
-(defun change-list-copy (lst pos new-val)
-	"Change a pos (position) in lst (list) to new-val (new value) and return a new list copy with that change"
-	(let ((new-lst (copy-list lst)))
-		(setf (nth pos new-lst) new-val)
-	new-lst))
+(defun change-array-copy (arr pos new-val)
+	"Change a pos (position) in arr (array) to new-val (new value) and return a new array copy with that change"
+	(let ((new-arr (copy-array arr)))
+		(setf (aref new-arr pos) new-val)
+	new-arr))
 
 ;; -----------------------------
 ;; OPERATOR AND GOAL FUNCTION
@@ -117,11 +117,16 @@
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
   	(make-state
-		:vehicle-routes 			(make-list (vrp-vehicles.number problem) :initial-element (list 0))
-		:unvisited-locations 		(create-initial-hash (vrp-customer.locations problem))
-		:number-unvisited-locations (length (rest (vrp-customer.locations problem)))
-		:remaining-tour-length 		(make-list (vrp-vehicles.number problem) :initial-element (vrp-max.tour.length  problem))
-		:remaining-capacity    		(make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem))))
+		:vehicle-routes
+			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
+		:unvisited-locations 
+			(create-initial-hash (vrp-customer.locations problem))
+		:number-unvisited-locations 
+			(length (rest (vrp-customer.locations problem)))
+		:remaining-tour-length
+			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-max.tour.length  problem)))
+		:remaining-capacity 
+			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem)))))
 
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
@@ -133,11 +138,11 @@
 			  (rem-capacity (- (remaining-capacity state cv) (get-demand customer-id))))
 			(if (and (> rem-tour-len (distance cv-location (get-depot-location))) (>= rem-capacity 0))
 				(setf generated-states
-					(cons (make-state :vehicle-routes (change-list-copy (state-vehicle-routes state) cv (cons customer-id (vehicle-route state cv)))
+					(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons customer-id (vehicle-route state cv)))
 								  	  :unvisited-locations (remove-location state customer-id)
 								  	  :number-unvisited-locations (1- (state-number-unvisited-locations state))
-								  	  :remaining-tour-length (change-list-copy (state-remaining-tour-length state) cv rem-tour-len)
-									  :remaining-capacity (change-list-copy (state-remaining-capacity state) cv rem-capacity))
+								  	  :remaining-tour-length (change-array-copy	(state-remaining-tour-length state) cv rem-tour-len)
+									  :remaining-capacity (change-array-copy    (state-remaining-capacity state)    cv rem-capacity))
 					generated-states)))))))
 
 (defun is-goal-state (state)
