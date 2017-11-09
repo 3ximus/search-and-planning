@@ -56,7 +56,7 @@
 	(car (gethash id *customer-hash*)))
 
 (defun get-demand(id)
-	(cdr (gethash id *customer-hash*)))
+	(second (gethash id *customer-hash*)))
 
 (defun make-customer-hash (locations demands)
 	"Creates a new hash-table from the location and demands lists. Its indexed by the customer ID."
