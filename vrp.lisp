@@ -30,13 +30,13 @@
 ;; STATE ACCESSORS -------------------------------------
 
 (defun vehicle-route (state vehicle)
-	(aref (state-vehicle-routes state) vehicle))
+	(nth vehicle (state-vehicle-routes state)))
 
 (defun remaining-capacity (state vehicle)
-	(aref (state-remaining-capacity state) vehicle))
+	(nth vehicle (state-remaining-capacity state)))
 
 (defun remaining-length (state vehicle)
-	(aref (state-remaining-tour-length state) vehicle))
+	(nth vehicle (state-remaining-tour-length state)))
 
 (defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
 	(let ((new-hash (copy-hash-table (state-unvisited-locations state))))
@@ -51,6 +51,8 @@
 (defvar *customer-hash*)
 
 ; GLOBAL HASH ACCESSOR FUNCTIONS
+(defun get-depot-location ()
+	(get-location 0))
 
 (defun get-location(id)
 	(car (gethash id *customer-hash*)))
@@ -74,10 +76,6 @@
 	"Calculates Euclidean distance between 2 locations"
 	(sqrt (+ (expt (- (cadr locationB) (cadr locationA)) 2) (expt (- (car locationB) (car locationA)) 2))))
 
-(defun lst-to-array (lst)
-	(let ((lst-len (length lst)))
-	(make-array (list lst-len) :initial-contents lst)))
-
 (defun copy-vrp (vrp-prob)
 	(make-vrp :name 			  (vrp-name vrp-prob)
 			  :vehicle.capacity   (vrp-vehicle.capacity vrp-prob)
@@ -89,54 +87,60 @@
 		(maphash #'(lambda(key value) (setf (gethash key new-table) value)) table)
 	new-table))
 
-(defun change-array-copy (arr pos new-val)
-	"Change a pos (position) in arr (array) to new-val (new value) and return a new array copy with that change"
-	(let ((new-array (copy-array arr)))
-		(setf (aref new-array pos) new-val)
-	new-array))
+(defun change-list-copy (lst pos new-val)
+	"Change a pos (position) in lst (list) to new-val (new value) and return a new list copy with that change"
+	(let ((new-lst (copy-list lst)))
+		(setf (nth pos new-lst) new-val)
+	new-lst))
 
 ;; -----------------------------
 ;; OPERATOR AND GOAL FUNCTION
 ;; -----------------------------
+
+(defun create-initial-hash (locations)
+	(let ((h (make-hash-table :test #'equalp)))
+		(dolist (item (rest locations) h) 
+			(setf (gethash (car item) h) nil)))) 
 
 (defun create-initial-state (problem)
 	"Create a state from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
   	(make-state
-		:vehicle-routes
-			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
-		:unvisited-locations (let ((h (make-hash-table :test #'equalp)))
-								(dolist (item (rest (vrp-customer.locations problem)))
-									(setf (gethash (car item) h) nil)) h)
-		:number-unvisited-locations 
-			(length (rest (vrp-customer.locations problem)))
-		:remaining-tour-length
-			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-max.tour.length problem)))
-		:remaining-capacity
-			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem)))))
+		:vehicle-routes 			(make-list (vrp-vehicles.number problem) :initial-element (list 0))
+		:unvisited-locations 		(create-initial-hash (vrp-customer.locations problem))
+		:number-unvisited-locations (length (rest (vrp-customer.locations problem)))
+		:remaining-tour-length 		(make-list (vrp-vehicles.number problem) :initial-element (vrp-max.tour.length  problem))
+		:remaining-capacity    		(make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem))))
+
+(defun get-current-vehicle (state)
+	(let ((nr-vehicles (length (state-vehicle-routes state))))
+		(loop for i from 0 to nr-vehicles 
+			do (if (not (and (> (length (vehicle-route state i)) 1) 	; has traveled
+							 (equalp (car (vehicle-route state i)) 0))) ; is not back at the depot
+					(return i)))))
+
+(defun get-unvisited-customer-ids (state)
+	(loop for key being the hash-keys of (state-unvisited-locations state) collect key))
+
 
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
-	(let* ((cv ; current vehicle
-			(loop for i from 0 to (vrp-vehicles.number *vrp-data*) do
-				(if (not (and (> (length (vehicle-route state i)) 1) ; has traveled
-							  (equalp (car (vehicle-route state i)) 0))) ; is not back at the depot
-					(return i))))
-		  (cv-location (get-location cv))
-		  (generated-states NIL))
-	(dolist (location (loop for key being the hash-keys of (state-unvisited-locations state) collect key))
-		(let ((rem-tour-len (- (remaining-length state cv) (distance cv-location (get-location location))))
-			  (rem-capacity (- (remaining-capacity state cv) (get-demand location))))
-			(if (and (> rem-tour-len (distance cv-location (get-location 0))) (>= rem-capacity 0))
-		(setf generated-states
-			(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons location (vehicle-route state cv)))
-						  :unvisited-locations (remove-location state location)
-						  :number-unvisited-locations (1- (state-number-unvisited-locations state))
-						  :remaining-tour-length (change-array-copy (state-remaining-tour-length state) cv rem-tour-len)
-						  :remaining-capacity (change-array-copy (state-remaining-capacity state) cv rem-capacity))
-			generated-states)))))
-	generated-states))
+	(let* ((cv (get-current-vehicle state)) 
+		   (cv-location (get-location cv))
+		   (generated-states NIL))
+	(dolist (customer-id (get-unvisited-customer-ids state) generated-states)
+		(let ((rem-tour-len (- (remaining-length state cv) (distance cv-location (get-location customer-id))))
+			  (rem-capacity (- (remaining-capacity state cv) (get-demand customer-id))))
+			(if (and (> rem-tour-len (distance cv-location (get-depot-location))) (>= rem-capacity 0))
+				(setf generated-states
+					(cons (make-state :vehicle-routes (change-list-copy (state-vehicle-routes state) cv (cons customer-id (vehicle-route state cv)))
+								  	  :unvisited-locations (remove-location state customer-id)
+								  	  :number-unvisited-locations (1- (state-number-unvisited-locations state))
+								  	  :remaining-tour-length (change-list-copy (state-remaining-tour-length state) cv rem-tour-len)
+									  :remaining-capacity (change-list-copy (state-remaining-capacity state) cv rem-capacity))
+					generated-states)))))))
+	; generated-states))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
