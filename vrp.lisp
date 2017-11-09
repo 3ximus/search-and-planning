@@ -21,7 +21,7 @@
 	customer.demand)      ; ordered list of demands (each demand has 2 elements (location-id demand-integer)) first element is the depot with demand value at zero
 
 (defstruct state
-	vehicle-status                ; array of lists containing the location history of each vehicle (current location being the first element)
+	vehicle-routes                ; array of lists containing the location history of each vehicle (current location being the first element)
 	unvisited-locations           ; list of unvisited locations
 	number-unvisited-locations    ; number of unvisited cities
 	remaining-tour-length
@@ -55,14 +55,13 @@
 
 (defun create-initial-state (problem)
 	"Create a problem from a vrp struct"
-	(setf *vrp-data* (copy-vrp problem)) ;setf de var global??? e necessario?
-	; FIXME this doesnt work probably... CHECK IF RESULTS ARE CORRECT
+	(setf *vrp-data* (copy-vrp problem))
   	(make-state
-		:vehicle-status
+		:vehicle-routes
 			(make-array (vrp-vehicles.number problem) :initial-contents
 				(let ((lst ())) ; make array with list of locations, starting at the depot
 					(dotimes (i (vrp-vehicles.number problem))
-						(setf lst (cons 0 lst)))
+						(setf lst (cons (list 0) lst)))
 				lst))
 		:unvisited-locations (rest (vrp-customer.locations problem))
 		:number-unvisited-locations (length (vrp-customer.locations problem))
@@ -79,14 +78,27 @@
 						(setf lst (cons (vrp-vehicle.capacity problem) lst)))
 				lst))))
 
-
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
-	nil)
-;	(dolist (loc (state-unvisited-locations state))
-;		(loop over vehicles last current positions)
-;		(find minimum (distance loc vehicle-current-position))
+	(let ((current-vehicle
+			(loop for i from 0 to (vrp-vehicles.number *vrp-data*) do
+				(if (not (and (> (length (aref (state-vehicle-routes state) i)) 1) ; has traveled
+							  (equalp (car (aref (state-vehicle-routes state) i)) 0))) ; is not back at the depot
+					(return i))))
+		  (generated-states NIL))
+	(dolist (location (state-unvisited-locations))
+		(cons (make-state :vehicle-routes (setf (aref (copy-array (state-vehicle-routes state)) current-vehicle)
+												(cons (car location) (aref (copy-array (state-vehicle-routes state)) current-vehicle)))
+						  :unvisited-locations NIL ; PLACEHOLDER replace with hash table removal of "location"
+						  :number-unvisited-locations (1- (state-number-unvisited-locations))
+						  :remaining-tour-length (setf (aref (copy-array (state-vehicle-routes state)) current-vehicle)
+						  							   (- (aref (copy-array (state-vehicle-routes state)) (distance PLACEHOLDER))))
+						  :remaining-capacity (setf (aref (copy-array (state-vehicle-routes state)) current-vehicle)
+						  							(- (aref (copy-array (state-vehicle-routes state)) 0))) ; PLACEHOLDER replace zero with demand value of current location
+			)
+			generated-states))))
 
+0
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
 	(equalp (state-number-unvisited-locations state) 0))

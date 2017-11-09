@@ -4,7 +4,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"taskName": "clisp (load vrp file into clisp)",
+			"label": "clisp (load vrp file into clisp)",
 			"type": "shell",
 			"command": "clisp -i -q vrp.lisp",
 			"problemMatcher": [],
@@ -14,7 +14,7 @@
 			}
 		},
 		{
-			"taskName": "run tests",
+			"label": "run tests",
 			"type": "shell",
 			"command": "clisp -q test_vrp.lisp",
 			"problemMatcher": [],
@@ -22,6 +22,12 @@
 				"kind": "test",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "run tests and launch interactive",
+			"type": "shell",
+			"command": "clisp -i -q test_vrp.lisp",
+			"problemMatcher": []
 		}
 	]
 }

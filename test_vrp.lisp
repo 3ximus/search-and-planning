@@ -32,6 +32,6 @@
 
 
 ; Testing create init state
-(format T "~%~%~%initial-state:~%~X~%~%~%" (create-initial-state *vrp-prob*))
 (trace create-initial-state)
+(trace gen-successors)
 (write (vrp *vrp-prob* "a*.best.heuristic"))
