@@ -58,6 +58,14 @@
 (defun get-demand(id)
 	(cdr (gethash id *customer-hash*)))
 
+(defun make-customer-hash (locations demands)
+	"Creates a new hash-table from the location and demands lists. Its indexed by the customer ID."
+	(let ((customer-hash (make-hash-table :test #'equalp)))
+		(loop for location in locations
+			  for demand   in demands
+			  do (setf (gethash (car location) customer-hash) (list (rest location) (second demand))))
+		customer-hash))
+
 ;; -----------------------------
 ;; BASIC FUNCTIONS
 ;; -----------------------------
@@ -87,28 +95,12 @@
 		(setf (aref new-array pos) new-val)
 	new-array))
 
-;; Each item of the list, must have the "id" as the first value -- i.e (id value1 value2 ...)
-(defun lst-to-hash (lst)
-	(let ((hash (make-hash-table :test #'equalp)))
-		(dolist (lst-item lst hash)
-			(setf (gethash (car lst-item) hash) (rest lst-item)))))
-
-;; Each item of the list, must have the "id" as the first value -- i.e (id value)
-(defun add-lst-to-hash (lst hash)
-	(dolist (lst-item lst hash)
-		(setf (gethash (car lst-item) hash) (cons (gethash (car lst-item) hash) (second lst-item)))))
-
-;; Hash functions
-(defun make-customer-hash (locations demands)
-	(let ((customer-hash (lst-to-hash locations)))
-		(add-lst-to-hash demands customer-hash)))
-
 ;; -----------------------------
 ;; OPERATOR AND GOAL FUNCTION
 ;; -----------------------------
 
 (defun create-initial-state (problem)
-	"Create a problem from a vrp struct"
+	"Create a state from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
   	(make-state
