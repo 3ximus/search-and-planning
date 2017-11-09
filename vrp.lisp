@@ -105,27 +105,16 @@
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
   	(make-state
 		:vehicle-routes
-			(make-array (vrp-vehicles.number problem) :initial-contents
-				(let ((lst ())) ; make array with list of locations, starting at the depot
-					(dotimes (i (vrp-vehicles.number problem))
-						(setf lst (cons (list 0) lst)))
-				lst))
+			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element 0))
 		:unvisited-locations (let ((h (make-hash-table :test #'equalp)))
 								(dolist (item (rest (vrp-customer.locations problem)))
 									(setf (gethash (car item) h) nil)) h)
-		:number-unvisited-locations (length (rest (vrp-customer.locations problem)))
+		:number-unvisited-locations 
+			(length (rest (vrp-customer.locations problem)))
 		:remaining-tour-length
-		 	(make-array (vrp-vehicles.number problem) :initial-contents
-				(let ((lst ())) ; make array with remaining tour length for each vehicle
-					(dotimes (i (vrp-vehicles.number problem))
-						(setf lst (cons (vrp-max.tour.length problem) lst)))
-				lst))
+			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-max.tour.length problem)))
 		:remaining-capacity
-			(make-array (vrp-vehicles.number problem) :initial-contents
-				(let ((lst ())) ; make array with remaining cargo for each vehicle
-					(dotimes (i (vrp-vehicles.number problem))
-						(setf lst (cons (vrp-vehicle.capacity problem) lst)))
-				lst))))
+			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem)))))
 
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
