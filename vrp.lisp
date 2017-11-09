@@ -105,7 +105,7 @@
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
   	(make-state
 		:vehicle-routes
-			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element 0))
+			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
 		:unvisited-locations (let ((h (make-hash-table :test #'equalp)))
 								(dolist (item (rest (vrp-customer.locations problem)))
 									(setf (gethash (car item) h) nil)) h)

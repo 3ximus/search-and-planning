@@ -30,7 +30,7 @@
 												(38 15) (39 14) (40 7) (41 27) (42 13) (43 11) (44 16)
 												(45 10) (46 5) (47 25) (48 17) (49 18) (50 10))))
 
-(write (create-initial-state *vrp-prob*))
+;(write (create-initial-state *vrp-prob*))
 ;(format T "~%~%state: ~S~%~%" state)
 
 ;(setf *customerHash* (makeCustomerHash (vrp-customer.locations *vrp-prob*) (vrp-customer.demand *vrp-prob*)))
@@ -38,5 +38,5 @@
 
 ; Testing create init state
 ;(trace create-initial-state)
-;(trace gen-successors)
-;(write (vrp *vrp-prob* "a*.best.heuristic"))
+(trace gen-successors)
+(write (vrp *vrp-prob* "a*.best.heuristic"))
