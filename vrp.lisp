@@ -39,7 +39,9 @@
 	(aref (state-remaining-tour-length state) vehicle))
 
 (defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
-	(remhash location (copy-hash-table (state-unvisited-locations state))))
+	(let ((new-hash (copy-hash-table (state-unvisited-locations state))))
+		(remhash location new-hash)
+	new-hash))
 
 ;; -----------------------------
 ;; GLOBAL
@@ -143,13 +145,17 @@
 		  (cv-location (get-location cv))
 		  (generated-states NIL))
 	(dolist (location (loop for key being the hash-keys of (state-unvisited-locations state) collect key))
-		(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons location (vehicle-route state cv)))
+		(let ((rem-tour-len (- (remaining-length state cv) (distance cv-location (get-location location))))
+			  (rem-capacity (- (remaining-capacity state cv) (get-demand location))))
+			(if (and (> rem-tour-len (distance cv-location (get-location 0))) (>= rem-capacity 0))
+		(setf generated-states
+			(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons location (vehicle-route state cv)))
 						  :unvisited-locations (remove-location state location)
 						  :number-unvisited-locations (1- (state-number-unvisited-locations state))
-						  :remaining-tour-length (change-array-copy (state-remaining-tour-length state) cv
-						  							(- (remaining-length state cv) (distance (get-location cv-location) (get-location location))))
-						  :remaining-capacity (change-array-copy (state-remaining-capacity state) cv (- (remaining-capacity state cv) (get-demand location))))
-			generated-states))))
+						  :remaining-tour-length (change-array-copy (state-remaining-tour-length state) cv rem-tour-len)
+						  :remaining-capacity (change-array-copy (state-remaining-capacity state) cv rem-capacity))
+			generated-states)))))
+	generated-states))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
