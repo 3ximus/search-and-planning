@@ -75,7 +75,7 @@
 	(let ((customer-hash (make-hash-table :test #'equalp)))
 		(loop for location in locations
 			  for demand   in demands
-			  do (setf (gethash (car location) customer-hash) (list (rest location) (second demand)))) ; [id] -> ((x y) demand) 
+			  do (setf (gethash (car location) customer-hash) (list (rest location) (second demand)))) ; [id] -> ((x y) demand)
 		customer-hash))
 
 ;; -----------------------------
@@ -109,8 +109,8 @@
 
 (defun create-initial-hash (locations)
 	(let ((h (make-hash-table :test #'equalp)))
-		(dolist (item (rest locations) h) 
-			(setf (gethash (car item) h) nil)))) 
+		(dolist (item (rest locations) h)
+			(setf (gethash (car item) h) nil))))
 
 (defun create-initial-state (problem)
 	"Create a state from a vrp struct"
@@ -119,26 +119,26 @@
   	(make-state
 		:vehicle-routes
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
-		:unvisited-locations 
+		:unvisited-locations
 			(create-initial-hash (vrp-customer.locations problem))
-		:number-unvisited-locations 
+		:number-unvisited-locations
 			(length (rest (vrp-customer.locations problem)))
 		:remaining-tour-length
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-max.tour.length  problem)))
-		:remaining-capacity 
+		:remaining-capacity
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem)))))
 
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
-	(let ((cv (get-current-vehicle state)) 
+	(let ((cv (get-current-vehicle state))
 		  (cv-location NIL)
 		  (generated-states NIL))
-	
-	;; If cv is null there are no active vehicles and the current state is not a solution (because a* didnt end). 
+
+	;; If cv is null there are no active vehicles and the current state is not a solution (because a* didnt end).
 	;; Return null to force backtracking.
-	(if (null cv) 
+	(if (null cv)
 		(return-from gen-successors NIL)
-		(setf cv-location (get-location cv)))
+		(setf cv-location (get-location (car (vehicle-route state cv)))))
 
 	(dolist (customer-id (get-unvisited-customer-ids state))
 		(let* ((customer-location (get-location customer-id))
@@ -153,9 +153,9 @@
 									  :remaining-capacity 	 (change-array-copy (state-remaining-capacity state)    cv rem-capacity))
 						  generated-states)))))
 
-	;; If generated-states is null then there are no other positions that that particular vehicle can travel to. 
+	;; If generated-states is null then there are no other positions that that particular vehicle can travel to.
 	;; Must return to depot.
-	(if (null generated-states)   
+	(if (null generated-states)
 		(cons (make-state   :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons 0 (vehicle-route state cv))) ; has to go back to the depot
 							:unvisited-locations 		(state-unvisited-locations state)
 							:number-unvisited-locations (state-number-unvisited-locations state)
