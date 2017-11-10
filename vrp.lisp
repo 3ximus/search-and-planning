@@ -130,9 +130,9 @@
 
 (defun gen-successors (state)
 	"Generates the successor states of a given state"
-	(let* ((cv (get-current-vehicle state)) 
-		   (cv-location NIL)
-		   (generated-states NIL))
+	(let ((cv (get-current-vehicle state)) 
+		  (cv-location NIL)
+		  (generated-states NIL))
 	
 	;; If cv is null there are no active vehicles and the current state is not a solution (because a* didnt end). 
 	;; Return null to force backtracking.
@@ -142,9 +142,9 @@
 
 	(dolist (customer-id (get-unvisited-customer-ids state))
 		(let* ((customer-location (get-location customer-id))
-			   (rem-tour-len (- (remaining-length state cv) (distance cv-location customer-location) (distance customer-location (get-depot-location))))
+			   (rem-tour-len (- (remaining-length state cv) (distance cv-location customer-location)))
 			   (rem-capacity (- (remaining-capacity state cv) (get-demand customer-id))))
-			(if (and (>= rem-tour-len 0) (>= rem-capacity 0))
+			(if (and (>= rem-tour-len (distance customer-location (get-depot-location))) (>= rem-capacity 0))
 				(setf generated-states
 					(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons customer-id (vehicle-route state cv)))
 								  	  :unvisited-locations (remove-location state customer-id)
@@ -153,7 +153,7 @@
 									  :remaining-capacity 	 (change-array-copy (state-remaining-capacity state)    cv rem-capacity))
 						  generated-states)))))
 
-	;; If generated-states is null then there are no other positions that that vehicle can travel to. 
+	;; If generated-states is null then there are no other positions that that particular vehicle can travel to. 
 	;; Must return to depot.
 	(if (null generated-states)   
 		(cons (make-state   :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons 0 (vehicle-route state cv))) ; has to go back to the depot
