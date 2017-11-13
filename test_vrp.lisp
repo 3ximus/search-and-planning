@@ -38,5 +38,5 @@
 
 ; Testing create init state
 ;(trace create-initial-state)
-(trace gen-successors)
-(write (vrp *vrp-prob* "a*.best.heuristic"))
+;(untrace gen-successors)
+(write (vrp *vrp-prob* "iterative.sampling"))
