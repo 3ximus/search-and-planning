@@ -60,6 +60,10 @@
 (defvar *vrp-data*)
 (defvar *customer-hash*)
 
+; These values will be used as reference for cost and heuristic as the value
+(defvar *farthest-customer*) ; will hold the largest distance from the depot
+(defvar *demanding-customer*) ; will hold the customer with highest demand
+
 ; GLOBAL HASH ACCESSOR FUNCTIONS
 (defun get-depot-location ()
 	(get-location 0))
@@ -116,6 +120,21 @@
 	"Create a state from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
+	(setf *farthest-customer*
+		(let ((max-distance 0))
+			(dolist (item (rest (vrp-customer.locations problem)))
+				(let ((distance (distance (get-depot-location) (rest item))))
+					(if (> distance max-distance)
+						(setf max-distance distance))))
+		max-distance))
+	(setf *demanding-customer*
+		(let ((max-demand 0))
+			(dolist (item (rest (vrp-customer.demand problem)))
+				(let ((demand (cadr item)))
+					(if (> demand max-demand)
+						(setf max-demand demand))))
+		max-demand))
+	(break )
   	(make-state
 		:vehicle-routes
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
@@ -179,9 +198,15 @@
 (defun alternative-heuristic (state)
 	0)
 
+; The cost is calculated by adding the distance to get to this state from the previous and the diference to the maximum demand (it should have lower costs for customers with high demand)
+; NOTE @AndreSobral since distance is more important i gave it a factor of 1.5 -- if this remains it must be tweaked
 (defun cost-function (state)
-	"This functionn gives the cost of a state"
-	0)
+	"This function gives the cost of a state"
+	(let* ((cv (get-current-vehicle state))
+		  (cv-id (car (vehicle-route state cv)))
+		  (distance-gethere (if (equalp cv-id 0) 0 (distance (get-location cv-id) (get-location (cadr (vehicle-route state cv)))))) ; TODO if this cost function turns out to be viable this value should be saved to the state since its calculated when generating it
+		  (demand-gethere (if (equalp cv-id 0) 0 (get-demand (car (vehicle-route state cv))))))
+		(+ (- *demanding-customer* demand-gethere) (* 1.5 distance-gethere))))
 
 ;; -----------------------------
 ;; SOLVE FUNCTION
