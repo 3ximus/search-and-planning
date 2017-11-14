@@ -8,22 +8,25 @@
 ;   if ΔE > 0 then current ← next
 ;   else current ← next only with probability e^ΔE/T
 
+
 (defstruct problem
 	initial-state
 	gen-successors
+	state-value ; evaluate a state to determine how good it is
 	schedule ; cooling schedule function
-	state-value) ; evaluate a state to determine how good it is
+	initial-schedule-value) ; initial value for the scheduling function
 
 (defun create-problem-simulated-annealing (initial-state gen-successors
-											&key schedule state-value)
+											&key state-value schedule initial-schedule-value)
 	(make-problem :initial-state initial-state
 				  :gen-successors gen-successors
+				  :state-value state-value
 				  :schedule schedule
-				  :state-value state-value))
+				  :initial-schedule-value initial-schedule-value))
 
 (defun get-random-element (some-list)
 	"get a random element from a list"
-	(nth (random (length some-list) some-list)))
+	(nth (random (length some-list)) some-list))
 
 (defun check-probability (delta-worse temp)
 	"returns true with probability e^ΔE/T"
@@ -33,13 +36,18 @@
 ;; COOLING SCHEDULES
 ;; -----------------------------
 
+; Good values for this ALPHA range from 0.8 to 0.99
+(defconstant ALPHA 0.9) ; used for exponential-multiplicative cooling
+(defconstant INITIAL_TEMP 2000) ; used for exponential-multiplicative cooling
+
 (defun exponential-multiplicative-cooling (delta-t &key initial-temp)
-	"Tk = T0 * a^k"
-	0)
+	"Cooling scheduler Tk = T0 * a^k"
+	(if (null initial-temp) (setf initial-temp INITIAL_TEMP))
+	(* initial-temp (expt ALPHA delta-t)))
 
 
 (defun logarithmic-multiplicative-cooling (delta-t &key initial-temp)
-	"Tk = T0 / ( 1+ a * log(1 + k) )"
+	"Cooling scheduler  = T0 / ( 1+ a * log(1 + k) )"
 	0)
 
 ;; -----------------------------
@@ -49,12 +57,12 @@
 		  (time-value 0)
 		  (successors nil))
 		(loop while (and (incf time-value)
-						 (setf successors ((problem-gen-successors problem) current))
+						 (setf successors (funcall (problem-gen-successors problem) current))
 						 (incf *nos-expandidos*)
 						 (incf *nos-gerados* (length successors))) do
-			(let ((temp (problem-schedule time-value))
+			(let* ((temp (funcall (problem-schedule problem) time-value :initial-temp (problem-initial-schedule-value problem)))
 				  (next (get-random-element successors))
-				  (delta-worse (- (problem-state-value current) (problem-state-value next))))
+				  (delta-worse (- (funcall (problem-state-value problem) current) (funcall (problem-state-value problem) next))))
 				(if (equalp temp 0)
 					(return current))
 				(if (> delta-worse 0)

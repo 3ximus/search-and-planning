@@ -36,8 +36,7 @@
 ;(setf *customerHash* (makeCustomerHash (vrp-customer.locations *vrp-prob*) (vrp-customer.demand *vrp-prob*)))
 ;(format T "id: ~X location: ~X demand: ~D~%" 3 (getCustomerLocation *customerHash* 3) (getCustomerDemand *customerHash* 3))
 
-; Testing create init state
-;(trace create-initial-state)
-(trace gen-successors)
+(trace exponential-multiplicative-cooling)
+;(trace gen-successors)
 ;(trace cost-function)
 (write (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
