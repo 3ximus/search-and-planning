@@ -32,6 +32,15 @@
 	"returns true with probability e^ΔE/T"
 	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
+
+; VALUE OF A STATE
+(defun state-value (state)
+	(let ((remaining-tour (reduce #'+ (state-remaining-tour-length state)))
+		  (remaining-capacity (reduce #'+ (state-remaining-capacity state)))
+		  (max-capacity (* (vrp-vehicles.number *vrp-data*) (vrp-vehicle.capacity *vrp-data*)))
+		  (max-length (* (vrp-vehicles.number *vrp-data*) (vrp-max.tour.length *vrp-data*))))
+		(+ (state-number-unvisited-locations state) (+ remaining-tour remaining-capacity)))) ; FIXME
+
 ;; -----------------------------
 ;; COOLING SCHEDULES
 ;; -----------------------------
@@ -68,4 +77,5 @@
 				(if (> delta-worse 0)
 					(setf current next)
 					(if (check-probability delta-worse temp)
-						(setf current next)))))))
+						(setf current next)))))
+	current)) ; FIXME This should not be needed, only stops when temp is zero

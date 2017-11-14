@@ -39,4 +39,12 @@
 (trace exponential-multiplicative-cooling)
 ;(trace gen-successors)
 ;(trace cost-function)
-(write (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
+(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
+(write result)
+
+; NOTE OUTPUT TO BE MADE INTO A GRAPH
+(with-open-file (str "out.txt"
+					 :direction :output
+					 :if-exists :supersede
+					 :if-does-not-exist :create)
+	(format str "~S~%~%~S" *vrp-prob* result))

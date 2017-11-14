@@ -239,7 +239,7 @@
 						(create-initial-state problema)
 						#'gen-successors
 						:schedule #'exponential-multiplicative-cooling
-						:state-value #'cost-function)))
+						:state-value #'state-value)))
 		((string-equal tipo-procura "best.approach")
 			(best-approach (create-initial-state problema))))))  ; TODO
 (let ((*nos-gerados* 0)
