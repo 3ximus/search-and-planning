@@ -37,7 +37,7 @@ node_trace = Scatter(
 for n in data_points:
 	node_trace['x'].append(data_points[n][0])
 	node_trace['y'].append(data_points[n][1])
-	node_trace['text'].append(str(n))
+	node_trace['text'].append("%d  [ %.2f %.2f ]" % (n, data_points[n][0], data_points[n][1]))
 
 edges = []
 for i, path in enumerate(paths):
@@ -52,6 +52,6 @@ for i, path in enumerate(paths):
 		edges[i]['y'] += [y0, y1, None]
 
 fig = Figure(data=Data([node_trace,] + edges),
-			 layout=Layout( title='Search Graph', hovermode='closest', margin=dict(b=20,l=5,r=5,t=40)))
+			 layout=Layout( title='Search Graph', hovermode='closest'))
 plotly.offline.plot(fig, filename='search_graph.html')
 
