@@ -40,4 +40,4 @@
 ;(trace create-initial-state)
 (trace gen-successors)
 ;(trace cost-function)
-(write (vrp *vrp-prob* "a*.best.heuristic"))
+(write (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))

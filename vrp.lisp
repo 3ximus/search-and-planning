@@ -235,16 +235,21 @@
 			((string-equal tipo-procura "iterative.sampling")
 				(iterative-sampling (create-initial-state problema)))  ; TODO
 			((string-equal tipo-procura "simulated.annealing.or.genetic.algoritm")
-				(simulated-annealing (create-initial-state problema)))  ; TODO
-			((string-equal tipo-procura "best.approach")
-				(best-approach (create-initial-state problema))))))  ; TODO
-	(let ((*nos-gerados* 0)
-		(*nos-expandidos* 0)
-		(tempo-inicio (get-internal-run-time )))
-		(let ((solucao (faz-a-procura problema tipo-procura
-					profundidade-maxima
-					espaco-em-arvore?)))
-	(list solucao
+				(simulated-annealing
+					(create-problem-simulated-annealing
+						(create-initial-state problema)
+						#'gen-successors
+						:schedule #'exponential-multiplicative-cooling
+						:state-value #'cost-function)))
+		((string-equal tipo-procura "best.approach")
+			(best-approach (create-initial-state problema))))))  ; TODO
+(let ((*nos-gerados* 0)
+	(*nos-expandidos* 0)
+	(tempo-inicio (get-internal-run-time )))
+	(let ((solucao (faz-a-procura problema tipo-procura
+				profundidade-maxima
+				espaco-em-arvore?)))
+(list solucao
 			(- (get-internal-run-time ) tempo-inicio)
 			*nos-expandidos*
 			*nos-gerados*)))))
