@@ -134,7 +134,6 @@
 					(if (> demand max-demand)
 						(setf max-demand demand))))
 		max-demand))
-	(break )
   	(make-state
 		:vehicle-routes
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
