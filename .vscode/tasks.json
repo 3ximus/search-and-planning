@@ -24,6 +24,12 @@
 			}
 		},
 		{
+			"label": "run tests and launch GRAPH",
+			"type": "shell",
+			"command": "clisp -q test_vrp.lisp && python3 graph_view.py",
+			"problemMatcher": []
+		},
+		{
 			"label": "run tests and launch interactive",
 			"type": "shell",
 			"command": "clisp -i -q test_vrp.lisp",
