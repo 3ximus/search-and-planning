@@ -32,6 +32,15 @@
 	"returns true with probability e^ΔE/T"
 	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
+(defun get-first-solution (initial-state)
+	"get the first solution for the simulated annealing problem"
+	(let ((nearest-destination 0) (nearest-state nil))
+		(dolist (suc (gen-successors initial-state))
+			(let ((cv (get-current-vehicle suc)))
+				(if (null cv) (setf nearest-state suc)
+				(if (< nearest-destination (remaining-length suc))
+					(progn (setf nearest-state suc) (setf nearest-destionation (remaining-length suc)))))))
+	(list nearest-state)))
 
 ;; -----------------------------
 ;; VALUE OF A STATE
@@ -56,13 +65,13 @@
 (defconstant ALPHA 0.99) ; used for exponential-multiplicative cooling
 (defconstant INITIAL_TEMP 100) ; used for exponential-multiplicative cooling
 
-(defun exponential-multiplicative-cooling (delta-t &key (initial-temp INITIAL_TEMP))
+(defun exponential-multiplicative-cooling (delta-t &key initial-temp)
 	"Cooling scheduler Tk = T0 * a^k"
 	(if (null initial-temp) (setf initial-temp INITIAL_TEMP))
 	(* initial-temp (expt ALPHA delta-t)))
 
 
-(defun logarithmic-multiplicative-cooling (delta-t &key (initial-temp INITIAL_TEMP))
+(defun logarithmic-multiplicative-cooling (delta-t &key initial-temp)
 	"Cooling scheduler  = T0 / ( 1+ a * log(1 + k) )"
 	0)
 

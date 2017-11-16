@@ -37,7 +37,7 @@
 ;(format T "id: ~X location: ~X demand: ~D~%" 3 (getCustomerLocation *customerHash* 3) (getCustomerDemand *customerHash* 3))
 
 (trace exponential-multiplicative-cooling)
-;(trace state-value)
+(trace get-first-solution)
 ;(trace gen-successors)
 ;(trace cost-function)
 (setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))

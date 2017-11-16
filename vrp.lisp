@@ -29,13 +29,19 @@
 
 ;; STATE ACCESSORS -------------------------------------
 
-(defun vehicle-route (state vehicle)
+(defun vehicle-route (state &optional vehicle)
+	"get vehicle route, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-vehicle-routes state) vehicle))
 
-(defun remaining-capacity (state vehicle)
+(defun remaining-capacity (state &optional vehicle)
+	"get remaining capacity of a vehicle, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-capacity state) vehicle))
 
-(defun remaining-length (state vehicle)
+(defun remaining-length (state &optional vehicle)
+	"get remaining length of a vehicle trip, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-tour-length state) vehicle))
 
 (defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
@@ -237,7 +243,8 @@
 				(simulated-annealing
 					(create-problem-simulated-annealing
 						(create-initial-state problema)
-						#'gen-successors
+						;#'gen-successors
+						#'get-first-solution ; PLACEHOLDER
 						:schedule #'exponential-multiplicative-cooling
 						:state-value #'state-value)))
 		((string-equal tipo-procura "best.approach")
