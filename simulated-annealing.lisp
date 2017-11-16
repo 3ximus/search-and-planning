@@ -33,29 +33,36 @@
 	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
 
-; VALUE OF A STATE
+;; -----------------------------
+;; VALUE OF A STATE
+;; -----------------------------
+
+(defconstant REMAIN_TOUR_CAPACITY_FACTOR 0.2) ; used for state-value calculations as a factor for remaining tour length and vehicles capacity (should be <1 to enphasise the number of unvisited locations)
+
 (defun state-value (state)
 	(let ((remaining-tour (reduce #'+ (state-remaining-tour-length state)))
 		  (remaining-capacity (reduce #'+ (state-remaining-capacity state)))
 		  (max-capacity (* (vrp-vehicles.number *vrp-data*) (vrp-vehicle.capacity *vrp-data*)))
 		  (max-length (* (vrp-vehicles.number *vrp-data*) (vrp-max.tour.length *vrp-data*))))
-		(+ (state-number-unvisited-locations state) (+ remaining-tour remaining-capacity)))) ; FIXME
+		; unvisited-locations + REMAIN_TOUR_CAPACITY_FACTOR * (max-rem-tour - remaining-tour) (max-capacity - remaining-capacity)
+		; closer to the end of the journey (length or capacity) higher the value of the state
+		(+ (state-number-unvisited-locations state) (* REMAIN_TOUR_CAPACITY_FACTOR (+ (- max-length remaining-tour) (- max-capacity remaining-capacity))))))
 
 ;; -----------------------------
 ;; COOLING SCHEDULES
 ;; -----------------------------
 
-; Good values for this ALPHA range from 0.8 to 0.99
-(defconstant ALPHA 0.9) ; used for exponential-multiplicative cooling
-(defconstant INITIAL_TEMP 2000) ; used for exponential-multiplicative cooling
+; Good values for this ALPHA range from 0.8 to 0.99 (higher ALPHA => cools slower)
+(defconstant ALPHA 0.99) ; used for exponential-multiplicative cooling
+(defconstant INITIAL_TEMP 100) ; used for exponential-multiplicative cooling
 
-(defun exponential-multiplicative-cooling (delta-t &key initial-temp)
+(defun exponential-multiplicative-cooling (delta-t &key (initial-temp INITIAL_TEMP))
 	"Cooling scheduler Tk = T0 * a^k"
 	(if (null initial-temp) (setf initial-temp INITIAL_TEMP))
 	(* initial-temp (expt ALPHA delta-t)))
 
 
-(defun logarithmic-multiplicative-cooling (delta-t &key initial-temp)
+(defun logarithmic-multiplicative-cooling (delta-t &key (initial-temp INITIAL_TEMP))
 	"Cooling scheduler  = T0 / ( 1+ a * log(1 + k) )"
 	0)
 
@@ -78,4 +85,4 @@
 					(setf current next)
 					(if (check-probability delta-worse temp)
 						(setf current next)))))
-	current)) ; FIXME This should not be needed, only stops when temp is zero
+	current))
