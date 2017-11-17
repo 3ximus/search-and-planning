@@ -8,7 +8,6 @@
 ;   if ΔE > 0 then current ← next
 ;   else current ← next only with probability e^ΔE/T
 
-
 (defstruct problem
 	initial-state
 	gen-successors
@@ -37,7 +36,7 @@
 	(let ((nearest-destination 0) (nearest-state nil))
 		(dolist (suc (gen-successors initial-state))
 			(let ((cv (get-current-vehicle suc)))
-				(if (null cv) (setf nearest-state suc)
+				;(if (null cv) (setf nearest-state suc)
 				(if (< nearest-destination (remaining-length suc))
 					(progn (setf nearest-state suc) (setf nearest-destionation (remaining-length suc)))))))
 	(list nearest-state)))
@@ -85,6 +84,7 @@
 						 (setf successors (funcall (problem-gen-successors problem) current))
 						 (incf *nos-expandidos*)
 						 (incf *nos-gerados* (length successors))) do
+			(log-state current) ;PLACEHOLDER
 			(let* ((temp (funcall (problem-schedule problem) time-value :initial-temp (problem-initial-schedule-value problem)))
 				  (next (get-random-element successors))
 				  (delta-worse (- (funcall (problem-state-value problem) current) (funcall (problem-state-value problem) next))))

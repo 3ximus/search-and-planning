@@ -63,7 +63,7 @@
 ;; GLOBAL
 ;; -----------------------------
 
-(defvar *vrp-data*)
+(defvar *vrp-data*) ; backup of the problem data
 (defvar *customer-hash*)
 
 ; These values will be used as reference for cost and heuristic as the value
@@ -79,6 +79,26 @@
 
 (defun get-demand(id)
 	(second (gethash id *customer-hash*)))
+
+(defun set-farthest-customer (problem)
+	"Set the farthest customer variable with given problem"
+	(setf *farthest-customer*
+		(let ((max-distance 0))
+			(dolist (item (rest (vrp-customer.locations problem)))
+				(let ((distance (distance (get-depot-location) (rest item))))
+					(if (> distance max-distance)
+						(setf max-distance distance))))
+		max-distance)))
+
+(defun set-demanding-customer (problem)
+	"Set the farthest customer variable with given problem"
+	(setf *demanding-customer*
+		(let ((max-demand 0))
+			(dolist (item (rest (vrp-customer.demand problem)))
+				(let ((demand (cadr item)))
+					(if (> demand max-demand)
+						(setf max-demand demand))))
+		max-demand)))
 
 (defun make-customer-hash (locations demands)
 	"Creates a new hash-table from the location and demands lists. Its indexed by the customer ID."
@@ -100,6 +120,7 @@
 	(make-vrp :name 			  (vrp-name vrp-prob)
 			  :vehicle.capacity   (vrp-vehicle.capacity vrp-prob)
 			  :vehicles.number 	  (vrp-vehicles.number vrp-prob)
+			  :customer.locations (vrp-customer.locations vrp-prob)
 			  :max.tour.length 	  (vrp-max.tour.length vrp-prob)))
 
 (defun copy-hash-table (table)
@@ -126,20 +147,8 @@
 	"Create a state from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
-	(setf *farthest-customer*
-		(let ((max-distance 0))
-			(dolist (item (rest (vrp-customer.locations problem)))
-				(let ((distance (distance (get-depot-location) (rest item))))
-					(if (> distance max-distance)
-						(setf max-distance distance))))
-		max-distance))
-	(setf *demanding-customer*
-		(let ((max-demand 0))
-			(dolist (item (rest (vrp-customer.demand problem)))
-				(let ((demand (cadr item)))
-					(if (> demand max-demand)
-						(setf max-demand demand))))
-		max-demand))
+	(set-farthest-customer problem)
+	(set-demanding-customer problem)
   	(make-state
 		:vehicle-routes
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
@@ -259,3 +268,16 @@
 			(- (get-internal-run-time ) tempo-inicio)
 			*nos-expandidos*
 			*nos-gerados*)))))
+
+
+;; -----------------------------
+;; OTHER FUNCTIONS
+;; -----------------------------
+
+(defun log-state (state)
+	"Log state to file to be made into a graph"
+	(with-open-file (str "out.txt"
+						:direction :output
+						:if-exists :supersede
+						:if-does-not-exist :create)
+		(format str "~S~%~%~S" *vrp-data* state)))

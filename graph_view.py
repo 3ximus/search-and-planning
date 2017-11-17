@@ -31,25 +31,27 @@ with open('out.txt', 'r') as fd:
 ## PLOT THINGS
 
 node_trace = Scatter(
-	x=[], y=[], text=[], mode='markers', hoverinfo='text', name='Locations',
-	marker=Marker( size=9, color='#888'))
+	x=[], y=[], text=[], mode='markers+text', name='Locations', textposition='bottom',
+	marker=Marker( size=9, color='#555'))
 
-for n in data_points:
+full_set = set(data_points.keys())
+reached_set = set([x for s in paths for x in s])
+for n in data_points: #set([0]).union(full_set - reached_set):
 	node_trace['x'].append(data_points[n][0])
 	node_trace['y'].append(data_points[n][1])
-	node_trace['text'].append("%d  [ %.2f %.2f ]" % (n, data_points[n][0], data_points[n][1]))
+	node_trace['text'].append(str(n))
 
 edges = []
 for i, path in enumerate(paths):
-	edges.append(Scatter( x=[], y=[], name='Vehicle %d' % i,
+	edges.append(Scatter( x=[], y=[], name='Vehicle %d' % i, text=[],
 		line=Line( width=3, autocolorscale=True),
-		marker=Marker(size=10),
-		hoverinfo='none', mode='lines+markers'))
-	for l in range(len(path)-1):
-		x0 , y0 = data_points[path[l]]
-		x1 , y1 = data_points[path[l+1]]
-		edges[i]['x'] += [x0, x1, None]
-		edges[i]['y'] += [y0, y1, None]
+		marker=Marker(size=15),
+		hoverinfo='text', mode='lines+markers'))
+	for l in range(len(path)):
+		x , y = data_points[path[l]]
+		edges[i]['x'].append(x)
+		edges[i]['y'].append(y)
+		edges[i]['text'].append("%d  [ %.1f %.1f ]" % (path[l], data_points[path[l]][0], data_points[path[l]][1]))
 
 fig = Figure(data=Data([node_trace,] + edges),
 			 layout=Layout( title='Search Graph', hovermode='closest'))
