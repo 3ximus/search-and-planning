@@ -22,6 +22,7 @@
 
 (defstruct state
 	vehicle-routes                ; array of lists containing the location history of each vehicle (current location being the first element)
+	current-vehicle               ; index of the current vehicle, nil if no vehicle is active (finished)
 	unvisited-locations           ; hash table containing only keys with city ids
 	number-unvisited-locations    ; number of unvisited cities
 	remaining-tour-length         ; array with remaining tour length for each vehicle
@@ -29,13 +30,19 @@
 
 ;; STATE ACCESSORS -------------------------------------
 
-(defun vehicle-route (state vehicle)
+(defun vehicle-route (state &optional vehicle)
+	"get vehicle route, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-vehicle-routes state) vehicle))
 
-(defun remaining-capacity (state vehicle)
+(defun remaining-capacity (state &optional vehicle)
+	"get remaining capacity of a vehicle, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-capacity state) vehicle))
 
-(defun remaining-length (state vehicle)
+(defun remaining-length (state &optional vehicle)
+	"get remaining length of a vehicle trip, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-tour-length state) vehicle))
 
 (defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
@@ -44,11 +51,7 @@
 	new-hash))
 
 (defun get-current-vehicle (state)
-	(let ((nr-vehicles (length (state-vehicle-routes state))))
-		(loop for i from 0 to (- nr-vehicles 1)
-			do (if (not (and (> (length (vehicle-route state i)) 1) 	; has traveled
-							 (equalp (car (vehicle-route state i)) 0))) ; is not back at the depot
-					(return i)))))
+	(state-current-vehicle state))
 
 (defun get-unvisited-customer-ids (state)
 	(loop for key being the hash-keys of (state-unvisited-locations state) collect key))
@@ -57,7 +60,7 @@
 ;; GLOBAL
 ;; -----------------------------
 
-(defvar *vrp-data*)
+(defvar *vrp-data*) ; backup of the problem data
 (defvar *customer-hash*)
 
 ; These values will be used as reference for cost and heuristic as the value
@@ -73,6 +76,26 @@
 
 (defun get-demand(id)
 	(second (gethash id *customer-hash*)))
+
+(defun set-farthest-customer (problem)
+	"Set the farthest customer variable with given problem"
+	(setf *farthest-customer*
+		(let ((max-distance 0))
+			(dolist (item (rest (vrp-customer.locations problem)))
+				(let ((distance (distance (get-depot-location) (rest item))))
+					(if (> distance max-distance)
+						(setf max-distance distance))))
+		max-distance)))
+
+(defun set-demanding-customer (problem)
+	"Set the farthest customer variable with given problem"
+	(setf *demanding-customer*
+		(let ((max-demand 0))
+			(dolist (item (rest (vrp-customer.demand problem)))
+				(let ((demand (cadr item)))
+					(if (> demand max-demand)
+						(setf max-demand demand))))
+		max-demand)))
 
 (defun make-customer-hash (locations demands)
 	"Creates a new hash-table from the location and demands lists. Its indexed by the customer ID."
@@ -94,6 +117,7 @@
 	(make-vrp :name 			  (vrp-name vrp-prob)
 			  :vehicle.capacity   (vrp-vehicle.capacity vrp-prob)
 			  :vehicles.number 	  (vrp-vehicles.number vrp-prob)
+			  :customer.locations (vrp-customer.locations vrp-prob)
 			  :max.tour.length 	  (vrp-max.tour.length vrp-prob)))
 
 (defun copy-hash-table (table)
@@ -120,23 +144,12 @@
 	"Create a state from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
-	(setf *farthest-customer*
-		(let ((max-distance 0))
-			(dolist (item (rest (vrp-customer.locations problem)))
-				(let ((distance (distance (get-depot-location) (rest item))))
-					(if (> distance max-distance)
-						(setf max-distance distance))))
-		max-distance))
-	(setf *demanding-customer*
-		(let ((max-demand 0))
-			(dolist (item (rest (vrp-customer.demand problem)))
-				(let ((demand (cadr item)))
-					(if (> demand max-demand)
-						(setf max-demand demand))))
-		max-demand))
+	(set-farthest-customer problem)
+	(set-demanding-customer problem)
   	(make-state
 		:vehicle-routes
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
+		:current-vehicle 0
 		:unvisited-locations
 			(create-initial-hash (vrp-customer.locations problem))
 		:number-unvisited-locations
@@ -152,7 +165,7 @@
 		  (cv-location NIL)
 		  (generated-states NIL))
 
-	;; If cv is null there are no active vehicles and the current state is not a solution (because a* didnt end).
+	;; If cv is null there are no active vehicles and the current state is not a solution
 	;; Return null to force backtracking.
 	(if (null cv)
 		(return-from gen-successors NIL)
@@ -165,16 +178,18 @@
 			(if (and (>= rem-tour-len (distance customer-location (get-depot-location))) (>= rem-capacity 0))
 				(setf generated-states
 					(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons customer-id (vehicle-route state cv)))
-								  	  :unvisited-locations (remove-location state customer-id)
-								  	  :number-unvisited-locations (1- (state-number-unvisited-locations state))
-								  	  :remaining-tour-length (change-array-copy	(state-remaining-tour-length state) cv rem-tour-len)
+									  :current-vehicle (state-current-vehicle state)
+									  :unvisited-locations (remove-location state customer-id)
+									  :number-unvisited-locations (1- (state-number-unvisited-locations state))
+									  :remaining-tour-length (change-array-copy	(state-remaining-tour-length state) cv rem-tour-len)
 									  :remaining-capacity 	 (change-array-copy (state-remaining-capacity state)    cv rem-capacity))
 						  generated-states)))))
 
 	;; If generated-states is null then there are no other positions that that particular vehicle can travel to.
 	;; Must return to depot.
-	(if (null generated-states)
+(if (null generated-states)
 		(cons (make-state   :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons 0 (vehicle-route state cv))) ; has to go back to the depot
+							:current-vehicle (if (not (>= (1+ (state-current-vehicle state)) (vrp-vehicles.number *vrp-data*))) (1+ (state-current-vehicle state)) nil)
 							:unvisited-locations 		(state-unvisited-locations state)
 							:number-unvisited-locations (state-number-unvisited-locations state)
 							:remaining-tour-length 		(change-array-copy	(state-remaining-tour-length state) cv (distance cv-location (get-depot-location)))
@@ -237,7 +252,8 @@
 				(simulated-annealing
 					(create-problem-simulated-annealing
 						(create-initial-state problema)
-						#'gen-successors
+						;#'gen-successors
+						#'get-first-solution ; PLACEHOLDER
 						:schedule #'exponential-multiplicative-cooling
 						:state-value #'state-value)))
 		((string-equal tipo-procura "best.approach")
@@ -252,3 +268,16 @@
 			(- (get-internal-run-time ) tempo-inicio)
 			*nos-expandidos*
 			*nos-gerados*)))))
+
+
+;; -----------------------------
+;; OTHER FUNCTIONS
+;; -----------------------------
+
+(defun log-state (state)
+	"Log state to file to be made into a graph"
+	(with-open-file (str "out.txt"
+						:direction :output
+						:if-exists :supersede
+						:if-does-not-exist :create)
+		(format str "~S~%~%~S" *vrp-data* state)))

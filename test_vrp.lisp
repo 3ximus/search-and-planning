@@ -30,21 +30,13 @@
 												(38 15) (39 14) (40 7) (41 27) (42 13) (43 11) (44 16)
 												(45 10) (46 5) (47 25) (48 17) (49 18) (50 10))))
 
-;(write (create-initial-state *vrp-prob*))
-;(format T "~%~%state: ~S~%~%" state)
 
-;(setf *customerHash* (makeCustomerHash (vrp-customer.locations *vrp-prob*) (vrp-customer.demand *vrp-prob*)))
-;(format T "id: ~X location: ~X demand: ~D~%" 3 (getCustomerLocation *customerHash* 3) (getCustomerDemand *customerHash* 3))
-
-(trace exponential-multiplicative-cooling)
-;(trace gen-successors)
+;(trace exponential-multiplicative-cooling)
+(trace get-first-solution)
+(trace gen-successors)
 ;(trace cost-function)
 (setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
 (write result)
 
-; NOTE OUTPUT TO BE MADE INTO A GRAPH
-(with-open-file (str "out.txt"
-					 :direction :output
-					 :if-exists :supersede
-					 :if-does-not-exist :create)
-	(format str "~S~%~%~S" *vrp-prob* result))
+; ===================================
+(log-state result)
