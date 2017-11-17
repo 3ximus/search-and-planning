@@ -38,7 +38,8 @@
 			(let ((cv (get-current-vehicle suc)))
 				;(if (null cv) (setf nearest-state suc)
 				(if (< nearest-destination (remaining-length suc))
-					(progn (setf nearest-state suc) (setf nearest-destionation (remaining-length suc)))))))
+					(progn (setf nearest-state suc) (setf nearest-destionation (remaining-length suc))))))
+	(break )
 	(list nearest-state)))
 
 ;; -----------------------------
@@ -61,7 +62,7 @@
 ;; -----------------------------
 
 ; Good values for this ALPHA range from 0.8 to 0.99 (higher ALPHA => cools slower)
-(defconstant ALPHA 0.99) ; used for exponential-multiplicative cooling
+(defconstant ALPHA 0.95) ; used for exponential-multiplicative cooling
 (defconstant INITIAL_TEMP 100) ; used for exponential-multiplicative cooling
 
 (defun exponential-multiplicative-cooling (delta-t &key initial-temp)
