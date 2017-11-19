@@ -31,7 +31,7 @@ with open('out.txt', 'r') as fd:
 ## PLOT THINGS
 
 node_trace = Scatter(
-	x=[], y=[], text=[], mode='markers+text', name='Locations', textposition='bottom',
+	x=[], y=[], text=[], mode='markers', name='Locations', textposition='bottom',
 	marker=Marker( size=9, color='#555'))
 
 full_set = set(data_points.keys())
@@ -53,7 +53,13 @@ for i, path in enumerate(paths):
 		edges[i]['y'].append(y)
 		edges[i]['text'].append("%d  [ %.1f %.1f ]" % (path[l], data_points[path[l]][0], data_points[path[l]][1]))
 
+updatemenus = list([
+	dict( buttons = list([
+		dict(label="Off", method='restyle', args=['mode',['markers']+['lines+markers']*len(edges)]),
+		dict(label="On", method='restyle', args=['mode',['markers+text']+['lines+markers']*len(edges)]),
+	]))])
+
 fig = Figure(data=Data([node_trace,] + edges),
-			 layout=Layout( title='Search Graph', hovermode='closest'))
+			 layout=Layout( title='Search Graph', hovermode='closest', updatemenus=updatemenus))
 plotly.offline.plot(fig, filename='search_graph.html')
 
