@@ -153,7 +153,11 @@
 	(set-demanding-customer problem)
   	(make-state
 		:vehicle-routes
-			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
+			(make-array (vrp-vehicles.number problem) :initial-contents
+				(let ((lst NIL))
+					(dotimes (i (vrp-vehicles.number problem) lst)
+						(setf lst (cons (list 0) lst)))))
+
 		:current-vehicle 0
 		:unvisited-locations
 			(create-initial-hash (vrp-customer.locations problem))

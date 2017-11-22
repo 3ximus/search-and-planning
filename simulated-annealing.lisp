@@ -38,13 +38,27 @@
 		  (dab (distance (get-location a) (get-location b))))
 		(- (+ dac dbc) dab)))
 
+
+(defun invalid-vehicle (state vehicle)
+	(or (>= vehicle (length (state-vehicle-routes state))) (< vehicle 0)))
+
+(defun invalid-index (vehicle-route index)
+	(or (> index (length vehicle-route)) (< index 0)))
+
+;; index [0 ...... n] (para inserir na ultima posicao e necessario colocar index = n)
+;; insere cliente na posicao especificada por index
 (defun insert-customer (state id vehicle index)
 	"Insert a customer ID in given vehicle path"
-	(push id (cdr (nth index (get-vehicle-route state vehicle))))) ; i swear on my life this line gave me cancer
-
-	;(let ((lst (get-vehicle-route state vehicle)))
-	;	(push id (cdr (nthcdr index lst)))
-	;lst))
+	(if (invalid-vehicle state vehicle)
+		(error "~S is not a valid vehicle-id." vehicle)
+		(let ((vehicle-route (get-vehicle-route state vehicle)))
+			(if (invalid-index vehicle-route index)
+				(error "Index out-of-range [input: ~D, Maxlength: ~D] in vehicle-route of vehicle ~D." index (length vehicle-route) vehicle)
+				(progn
+					(if (= index 0) ; push normal
+						(push id vehicle-route)
+						(push id (cdr (nthcdr (1- index) vehicle-route))))
+					(set-vehicle-route state vehicle-route vehicle))))))
 
 
 (defun get-possible-insertions (state id)
