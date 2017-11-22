@@ -30,17 +30,17 @@
 
 ;; STATE ACCESSORS -------------------------------------
 
-(defun vehicle-route (state &optional vehicle)
+(defun get-vehicle-route (state &optional vehicle)
 	"get vehicle route, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-vehicle-routes state) vehicle))
 
-(defun remaining-capacity (state &optional vehicle)
+(defun get-remaining-capacity (state &optional vehicle)
 	"get remaining capacity of a vehicle, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-capacity state) vehicle))
 
-(defun remaining-length (state &optional vehicle)
+(defun get-remaining-length (state &optional vehicle)
 	"get remaining length of a vehicle trip, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-tour-length state) vehicle))
@@ -169,15 +169,15 @@
 	;; Return null to force backtracking.
 	(if (null cv)
 		(return-from gen-successors NIL)
-		(setf cv-location (get-location (car (vehicle-route state cv)))))
+		(setf cv-location (get-location (car (get-vehicle-route state cv)))))
 
 	(dolist (customer-id (get-unvisited-customer-ids state))
 		(let* ((customer-location (get-location customer-id))
-			   (rem-tour-len (- (remaining-length state cv) (distance cv-location customer-location)))
-			   (rem-capacity (- (remaining-capacity state cv) (get-demand customer-id))))
+			   (rem-tour-len (- (get-remaining-length state cv) (distance cv-location customer-location)))
+			   (rem-capacity (- (get-remaining-capacity state cv) (get-demand customer-id))))
 			(if (and (>= rem-tour-len (distance customer-location (get-depot-location))) (>= rem-capacity 0))
 				(setf generated-states
-					(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons customer-id (vehicle-route state cv)))
+					(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons customer-id (get-vehicle-route state cv)))
 									  :current-vehicle (state-current-vehicle state)
 									  :unvisited-locations (remove-location state customer-id)
 									  :number-unvisited-locations (1- (state-number-unvisited-locations state))
@@ -187,8 +187,8 @@
 
 	;; If generated-states is null then there are no other positions that that particular vehicle can travel to.
 	;; Must return to depot.
-(if (null generated-states)
-		(cons (make-state   :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons 0 (vehicle-route state cv))) ; has to go back to the depot
+	(if (null generated-states)
+		(cons (make-state   :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons 0 (get-vehicle-route state cv))) ; has to go back to the depot
 							:current-vehicle (if (not (>= (1+ (state-current-vehicle state)) (vrp-vehicles.number *vrp-data*))) (1+ (state-current-vehicle state)) nil)
 							:unvisited-locations 		(state-unvisited-locations state)
 							:number-unvisited-locations (state-number-unvisited-locations state)
@@ -217,9 +217,9 @@
 (defun cost-function (state)
 	"This function gives the cost of a state"
 	(let* ((cv (get-current-vehicle state))
-		  (cv-id (car (vehicle-route state cv)))
-		  (distance-gethere (if (equalp cv-id 0) 0 (distance (get-location cv-id) (get-location (cadr (vehicle-route state cv)))))) ; TODO if this cost function turns out to be viable this value should be saved to the state since its calculated when generating it
-		  (demand-gethere (if (equalp cv-id 0) 0 (get-demand (car (vehicle-route state cv))))))
+		  (cv-id (car (get-vehicle-route state cv)))
+		  (distance-gethere (if (equalp cv-id 0) 0 (distance (get-location cv-id) (get-location (cadr (get-vehicle-route state cv)))))) ; TODO if this cost function turns out to be viable this value should be saved to the state since its calculated when generating it
+		  (demand-gethere (if (equalp cv-id 0) 0 (get-demand (car (get-vehicle-route state cv))))))
 		(+ (- *demanding-customer* demand-gethere) (* 1.5 distance-gethere))))
 
 ;; -----------------------------
@@ -251,9 +251,8 @@
 			((string-equal tipo-procura "simulated.annealing.or.genetic.algoritm")
 				(simulated-annealing
 					(create-problem-simulated-annealing
-						(create-initial-state problema)
-						;#'gen-successors
-						#'get-first-solution ; PLACEHOLDER
+						(initial-solution problema)
+						#'neighbor-states
 						:schedule #'exponential-multiplicative-cooling
 						:state-value #'state-value)))
 		((string-equal tipo-procura "best.approach")

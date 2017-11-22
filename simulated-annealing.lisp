@@ -24,23 +24,47 @@
 				  :initial-schedule-value initial-schedule-value))
 
 (defun get-random-element (some-list)
-	"get a random element from a list"
+	"Get a random element from a list"
 	(nth (random (length some-list)) some-list))
 
 (defun check-probability (delta-worse temp)
-	"returns true with probability e^ΔE/T"
+	"Returns true with probability e^ΔE/T"
 	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
-(defun get-first-solution (initial-state)
+(defun cost-savings (a b)
+	"Calculate cost savings between location a and b, Cost = c[0-a] + c[0-b] - c[a-b]"
+	(let ((da (distance (get-depot-location) (get-location a)))
+		  (db (distance (get-depot-location) (get-location b)))
+		  (dab (distance (get-location a) (get-location b))))
+		(- (+ da db) dab)))
+
+(defun insert-customer (state id)
+	"Insert a customer ID in the best vehicle route possible"
+	nil)
+
+;; ---------------------------------
+;; INITIAL SOLUTION AND NEIGHBORHOOD
+;; ---------------------------------
+
+(defun initial-solution (problem)
 	"get the first solution for the simulated annealing problem"
-	(let ((nearest-destination 0) (nearest-state nil))
-		(dolist (suc (gen-successors initial-state))
-			(let ((cv (get-current-vehicle suc)))
-				;(if (null cv) (setf nearest-state suc)
-				(if (< nearest-destination (remaining-length suc))
-					(progn (setf nearest-state suc) (setf nearest-destionation (remaining-length suc))))))
-	(break )
-	(list nearest-state)))
+	(setf *vrp-data* (copy-vrp problem))
+	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
+	(let ((tmpS (make-state
+				:vehicle-routes
+					(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
+				:number-unvisited-locations
+					(length (rest (vrp-customer.locations problem)))
+				:current-vehicle 0)))
+		(dolist (cid (get-unvisited-customer-ids tmpS))
+		)
+		(log-state tmpS)
+		(break )
+	))
+
+(defun neighbor-states (state)
+	"Get all neighbor states"
+	nil)
 
 ;; -----------------------------
 ;; VALUE OF A STATE
@@ -62,7 +86,7 @@
 ;; -----------------------------
 
 ; Good values for this ALPHA range from 0.8 to 0.99 (higher ALPHA => cools slower)
-(defconstant ALPHA 0.95) ; used for exponential-multiplicative cooling
+(defconstant ALPHA 0.97) ; used for exponential-multiplicative cooling
 (defconstant INITIAL_TEMP 100) ; used for exponential-multiplicative cooling
 
 (defun exponential-multiplicative-cooling (delta-t &key initial-temp)
@@ -85,7 +109,6 @@
 						 (setf successors (funcall (problem-gen-successors problem) current))
 						 (incf *nos-expandidos*)
 						 (incf *nos-gerados* (length successors))) do
-			(log-state current) ;PLACEHOLDER
 			(let* ((temp (funcall (problem-schedule problem) time-value :initial-temp (problem-initial-schedule-value problem)))
 				  (next (get-random-element successors))
 				  (delta-worse (- (funcall (problem-state-value problem) current) (funcall (problem-state-value problem) next))))
