@@ -35,6 +35,11 @@
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-vehicle-routes state) vehicle))
 
+(defun set-vehicle-route (state route &optional vehicle)
+	"get vehicle route, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
+	(setf (aref (state-vehicle-routes state) vehicle) route))
+
 (defun get-remaining-capacity (state &optional vehicle)
 	"get remaining capacity of a vehicle, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))

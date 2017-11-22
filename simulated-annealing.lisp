@@ -38,8 +38,17 @@
 		  (dab (distance (get-location a) (get-location b))))
 		(- (+ dac dbc) dab)))
 
-(defun insert-customer (state id)
-	"Insert a customer ID in the best vehicle route possible"
+(defun insert-customer (state id vehicle index)
+	"Insert a customer ID in given vehicle path"
+	(push id (cdr (nth index (get-vehicle-route state vehicle))))) ; i swear on my life this line gave me cancer
+
+	;(let ((lst (get-vehicle-route state vehicle)))
+	;	(push id (cdr (nthcdr index lst)))
+	;lst))
+
+
+(defun get-possible-insertions (state id)
+	"Returns list with possible places a costumer can go in a path"
 	)
 
 ;; ---------------------------------
