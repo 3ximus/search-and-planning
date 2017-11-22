@@ -251,7 +251,7 @@
 			((string-equal tipo-procura "simulated.annealing.or.genetic.algoritm")
 				(simulated-annealing
 					(create-problem-simulated-annealing
-						(initial-solution problema)
+						(initial-solution (create-initial-state problema))
 						#'neighbor-states
 						:schedule #'exponential-multiplicative-cooling
 						:state-value #'state-value)))

@@ -31,36 +31,28 @@
 	"Returns true with probability e^ΔE/T"
 	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
-(defun cost-savings (a b)
-	"Calculate cost savings between location a and b, Cost = c[0-a] + c[0-b] - c[a-b]"
-	(let ((da (distance (get-depot-location) (get-location a)))
-		  (db (distance (get-depot-location) (get-location b)))
+(defun cost-savings (a b c)
+	"Calculate cost savings between location a and b when c is inserted between, Cost = c[a-c] + c[b-c] - c[a-b]"
+	(let ((dac (distance (get-location a) (get-location c)))
+		  (dbc (distance (get-location b) (get-location c)))
 		  (dab (distance (get-location a) (get-location b))))
-		(- (+ da db) dab)))
+		(- (+ dac dbc) dab)))
 
 (defun insert-customer (state id)
 	"Insert a customer ID in the best vehicle route possible"
-	nil)
+	)
 
 ;; ---------------------------------
 ;; INITIAL SOLUTION AND NEIGHBORHOOD
 ;; ---------------------------------
 
-(defun initial-solution (problem)
+(defun initial-solution (zero-state)
 	"get the first solution for the simulated annealing problem"
-	(setf *vrp-data* (copy-vrp problem))
-	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
-	(let ((tmpS (make-state
-				:vehicle-routes
-					(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
-				:number-unvisited-locations
-					(length (rest (vrp-customer.locations problem)))
-				:current-vehicle 0)))
-		(dolist (cid (get-unvisited-customer-ids tmpS))
+	(dolist (cid (get-unvisited-customer-ids zero-state))
 		)
-		(log-state tmpS)
-		(break )
-	))
+	(log-state zero-state)
+	(break )
+	)
 
 (defun neighbor-states (state)
 	"Get all neighbor states"
