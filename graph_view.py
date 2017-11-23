@@ -14,19 +14,29 @@ paths = []
 
 # READ THINGS
 
+def add_data_points(string, data_points):
+	match = location_pattern.findall(string)
+	for x in match:
+		data_points[int(x.split(' ')[0])] = [float(v) for v in x.split(' ')[1:]]
+	return data_points
+
+def add_paths(string, paths):
+	match = results_pattern.findall(string)
+	paths.extend([[int(v) for v in x.strip('()').split(' ')] for x in match])
+	return paths
+
 with open('out.txt', 'r') as fd:
 	for line in fd:
 		if ":CUSTOMER.LOCATIONS" in line:
-			for line in fd:  # NOTE this will skip the line with :CUSTOMER.LOCATIONS so if any points come after this they wont be read
-				if ":CUSTOMER.DEMAND" in line:
-					break
-				else:
-					match = location_pattern.findall(line)
-					for x in match:
-						data_points[int(x.split(' ')[0])] = [float(v) for v in x.split(' ')[1:]]
+			data_points = add_data_points(line, data_points)
+			for line in fd:
+				if line == '\n': break
+				data_points = add_data_points(line, data_points)
 		if ":VEHICLE-ROUTES" in line:
-			match = results_pattern.findall(line)
-			paths.extend([[int(v) for v in x.strip('()').split(' ')] for x in match])
+			paths = add_paths(line, paths)
+			for line in fd:
+				if ':NUMBER-UNVISITED-LOCATIONS' in line: break
+				paths = add_paths(line, paths)
 
 ## PLOT THINGS
 
@@ -61,5 +71,5 @@ updatemenus = list([
 
 fig = Figure(data=Data([node_trace,] + edges),
 			 layout=Layout( title='Search Graph', hovermode='closest', updatemenus=updatemenus))
-plotly.offline.plot(fig, filename='search_graph.html')
+plotly.offline.plot(fig, filename='search_graph.html', auto_open=False)
 
