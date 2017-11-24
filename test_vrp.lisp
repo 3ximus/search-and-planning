@@ -35,7 +35,8 @@
 (trace initial-solution)
 ;(trace gen-successors)
 ;(trace cost-function)
-(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
+(setf result (vrp *vrp-prob* "a*.best.heuristic"))
+;(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
 (write result)
 
 ; ===================================
