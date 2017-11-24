@@ -180,6 +180,7 @@
 					(set-vehicle-route state vehicle-route vehicle)
 					(set-remaining-capacity state (- (get-remaining-capacity state vehicle) (get-demand id)) vehicle)
 					(set-remaining-length state (- (get-remaining-length state vehicle) added-length) vehicle)
+					(setf (state-transition-cost state) added-length)
 					(setf (state-unvisited-locations state) (remove-location state id))
 					(setf (state-number-unvisited-locations state) (1- (state-number-unvisited-locations state))))))))
 
@@ -263,7 +264,7 @@
 
 (defun gen-vehicle-states (id vehicle path state &key (index 1))
 	"This function is used by gen-successors-insertion-method to generate a list of states that result from the insertion of "
-	(when (equalp path '(0)) (return-from assess-path-insertions NIL))
+	(when (equalp path '(0)) (return-from gen-vehicle-states NIL))
 	(let ((cost (insertion-cost (car path) (car (cdr path)) id)))
 	(if (or (> (get-demand id) remaining-capacity) (> cost remaining-length))
 		(gen-vehicle-states id vehicle (cdr path) (1+ index)) ; then
@@ -322,9 +323,9 @@
              profundidade-maxima espaco-em-arvore?)
 		(cond ((string-equal tipo-procura "a*.best.heuristic")
 				(a* (cria-problema (create-initial-state problema)
-										(list #'gen-successors)
+										(list #'gen-successors-insertion-method)
 										:objectivo? #'is-goal-state
-										:custo #'cost-function
+										:custo #'insertion-cost-function
 										:heuristica #'heuristic)
 					:espaco-em-arvore? espaco-em-arvore?))
 			((string-equal tipo-procura "a*.best.alternative.heuristic")
