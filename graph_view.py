@@ -30,11 +30,12 @@ with open('out.txt', 'r') as fd:
 		if ":CUSTOMER.LOCATIONS" in line:
 			data_points = add_data_points(line, data_points)
 			for line in fd:
-				if line == '': break
-				else: data_points = add_data_points(line, data_points)
+				if line == '\n': break
+				data_points = add_data_points(line, data_points)
 		if ":VEHICLE-ROUTES" in line:
 			paths = add_paths(line, paths)
 			for line in fd:
+				if ':NUMBER-UNVISITED-LOCATIONS' in line: break
 				paths = add_paths(line, paths)
 
 ## PLOT THINGS

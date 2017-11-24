@@ -30,15 +30,11 @@
 
 ;; STATE ACCESSORS -------------------------------------
 
+; --- getters
 (defun get-vehicle-route (state &optional vehicle)
 	"get vehicle route, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-vehicle-routes state) vehicle))
-
-(defun set-vehicle-route (state route &optional vehicle)
-	"get vehicle route, if vehicle is omited the current vehicle is used"
-	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
-	(setf (aref (state-vehicle-routes state) vehicle) route))
 
 (defun get-remaining-capacity (state &optional vehicle)
 	"get remaining capacity of a vehicle, if vehicle is omited the current vehicle is used"
@@ -46,14 +42,9 @@
 	(aref (state-remaining-capacity state) vehicle))
 
 (defun get-remaining-length (state &optional vehicle)
-	"get remaining length of a vehicle trip, if vehicle is omited the current vehicle is used"
+	"get remaining length of a vehicle route, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-tour-length state) vehicle))
-
-(defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
-	(let ((new-hash (copy-hash-table (state-unvisited-locations state))))
-		(remhash location new-hash)
-	new-hash))
 
 (defun get-current-vehicle (state)
 	(state-current-vehicle state))
@@ -61,6 +52,27 @@
 (defun get-unvisited-customer-ids (state)
 	(loop for key being the hash-keys of (state-unvisited-locations state) collect key))
 
+; --- setters
+(defun set-vehicle-route (state route &optional vehicle)
+	"set vehicle route, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
+	(setf (aref (state-vehicle-routes state) vehicle) route))
+
+(defun set-remaining-capacity (state new-cap &optional vehicle)
+	"set remaining capacity of a vehicle, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
+	(setf (aref (state-remaining-capacity state) vehicle) new-cap))
+
+(defun set-remaining-length (state new-len &optional vehicle)
+	"set remaining length of a vehicle route, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
+	(setf (aref (state-remaining-tour-length state) vehicle) new-len))
+
+; --- others
+(defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
+	(let ((new-hash (copy-hash-table (state-unvisited-locations state))))
+		(remhash location new-hash)
+	new-hash))
 ;; -----------------------------
 ;; GLOBAL
 ;; -----------------------------
@@ -156,7 +168,8 @@
 			(make-array (vrp-vehicles.number problem) :initial-contents
 				(let ((lst NIL))
 					(dotimes (i (vrp-vehicles.number problem) lst)
-						(setf lst (cons (list 0) lst)))))
+						;(setf lst (cons (list 0) lst)))))
+						(setf lst (cons (list 0 0) lst))))) ; PLACEHOLDER !!!
 
 		:current-vehicle 0
 		:unvisited-locations

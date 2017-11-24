@@ -32,7 +32,8 @@
 	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
 (defun cost-savings (a b c)
-	"Calculate cost savings between location a and b when c is inserted between, Cost = c[a-c] + c[b-c] - c[a-b]"
+	"Calculate cost savings between location a and b when c is inserted between, Cost = c[a-c] + c[b-c] - c[a-b]
+	NOTE LESS is BETTER"
 	(let ((dac (distance (get-location a) (get-location c)))
 		  (dbc (distance (get-location b) (get-location c)))
 		  (dab (distance (get-location a) (get-location b))))
@@ -47,8 +48,8 @@
 
 ;; index [0 ...... n] (para inserir na ultima posicao e necessario colocar index = n)
 ;; insere cliente na posicao especificada por index
-(defun insert-customer (state id vehicle index)
-	"Insert a customer ID in given vehicle path"
+(defun insert-customer (state id vehicle index added-length) ; NOTE this does not adjust remaining capacity or remaining length
+	"Insert a customer ID in given vehicle path at specific index, added-length should contain how much the route will be increased"
 	(if (invalid-vehicle state vehicle)
 		(error "~S is not a valid vehicle-id." vehicle)
 		(let ((vehicle-route (get-vehicle-route state vehicle)))
@@ -58,12 +59,33 @@
 					(if (= index 0) ; push normal
 						(push id vehicle-route)
 						(push id (cdr (nthcdr (1- index) vehicle-route))))
-					(set-vehicle-route state vehicle-route vehicle))))))
+					(set-vehicle-route state vehicle-route vehicle)
+					(set-remaining-capacity state (- (get-remaining-capacity state vehicle) (get-demand id)) vehicle)
+					(set-remaining-length state (- (get-remaining-length state vehicle) added-length) vehicle))))))
 
+(defun assess-path-insertions (id path remaining-length remaining-capacity &key (index 1))
+	"Verify all insertions in path and returns the best one, takes remaining length and capacity into account"
+	(when (equalp path '(0)) (return-from assess-path-insertions (values most-positive-fixnum index))) ; returns largest number possible
+	(let ((cost (cost-savings (car path) (car (cdr path)) id)))
+		(multiple-value-bind (rest-cost rest-index) (assess-path-insertions id (cdr path) remaining-length remaining-capacity :index (1+ index))
+			; verify remaining length and capacity, if not enough return large cost so it doesn't get selected
+ 			(when (or (> (get-demand id) remaining-capacity) (< remaining-length cost)) (return-from assess-path-insertions (values most-positive-fixnum index)))
+			; decide if we return the cost gathered by recursion or the current one
+			;(format t "~F[~D] . ~F[~D]~%" cost index rest-cost rest-index)
+			(if (< cost rest-cost) (values cost index) (values rest-cost rest-index)))))
 
-(defun get-possible-insertions (state id)
-	"Returns list with possible places a costumer can go in a path"
-	)
+(defun is-in-vehicle-slice (id vehicle)
+	"Check if id is in vehicle map slice, any point in a vehicle map slice ... FIXME")
+
+(defun do-optimal-insertion (state id)
+	"Returns state in which the optimal insertion was done"
+	(let ((min-vcost most-positive-fixnum) (min-index nil) (min-vehicle nil))
+		(dotimes (i (vrp-vehicles.number *vrp-data*))
+			(multiple-value-bind (cost index) (assess-path-insertions id (get-vehicle-route state i) (get-remaining-length state i) (get-remaining-capacity state i))
+				(print cost)
+				(when (< cost min-vcost)
+					(setf min-vcost cost) (setf min-index index) (setf min-vehicle i))))
+	(when (not (null min-vehicle)) (insert-customer state id min-vehicle min-index min-vcost))))
 
 ;; ---------------------------------
 ;; INITIAL SOLUTION AND NEIGHBORHOOD
@@ -72,10 +94,11 @@
 (defun initial-solution (zero-state)
 	"get the first solution for the simulated annealing problem"
 	(dolist (cid (get-unvisited-customer-ids zero-state))
-		)
-	(log-state zero-state)
-	(break )
-	)
+		(do-optimal-insertion zero-state cid)
+		(log-state zero-state)
+		(print cid)
+		(break )
+		))
 
 (defun neighbor-states (state)
 	"Get all neighbor states"

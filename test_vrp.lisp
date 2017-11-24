@@ -32,31 +32,11 @@
 
 
 ;(trace exponential-multiplicative-cooling)
-; (trace initial-solution)
+(trace initial-solution)
 ;(trace gen-successors)
 ;(trace cost-function)
-; (setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
-; (write result)
-
-
-(setf init (create-initial-state *vrp-prob*))
-
-(setf id 99)
-(setf vehicle 1)
-(setf index 1)
-
-; (insert-customer init id vehicle index)
-; (insert-customer init 99 1 1)
-
-;(get-vehicle-route state vehicle)
-(write init)
-(format T "~%vehicle route of vehicle \"~D\": ~D~%" vehicle (get-vehicle-route init vehicle))
-
-(insert-customer init id vehicle index)
-(write init)
-
-
-
+(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
+(write result)
 
 ; ===================================
-; (log-state result)
+(log-state result)
