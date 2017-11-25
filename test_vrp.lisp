@@ -33,8 +33,7 @@
 
 ;(trace exponential-multiplicative-cooling)
 ;(trace initial-solution)
-(trace gen-successors-insertion-method)
-(trace gen-vehicle-states)
+;(trace gen-successors-insertion-method)
 ;(trace gen-successors)
 ;(trace cost-function)
 (setf result (vrp *vrp-prob* "a*.best.heuristic"))

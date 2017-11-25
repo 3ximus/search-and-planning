@@ -277,6 +277,7 @@
 (defun gen-successors-insertion-method (state)
 	"Generate successors states by adding each location to each vehicle path in each possible position
 	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
+	(log-state state) ; PLACEHOLDER
 	(let ((gstates NIL))
 	(dolist (id (get-unvisited-customer-ids state))
 		(dotimes (vehicle (vrp-vehicles.number *vrp-data*))
