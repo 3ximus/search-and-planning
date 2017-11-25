@@ -144,14 +144,14 @@
 		(maphash #'(lambda(key value) (setf (gethash key new-table) value)) table)
 	new-table))
 
-(defun copy-state (state)
+(defun copy-full-state (state)
 	"Create a full copy of a state"
-	(make-state :vehicle-routes             (copy-array (state-vehicle-routes state))
-				:current-vehicle            (state-current-vehicle state)
-				:unvisited-locations        (copy-hash-table (state-unvisited-locations state))
+	(make-state :vehicle-routes (let ((n (copy-array (state-vehicle-routes state)))) (dotimes (i (vrp-vehicles.number *vrp-data*)) (setf (aref n i) (copy-list (aref n i)))) n) ; because copy-array doesn't make copy of the lists...
+				:current-vehicle (state-current-vehicle state)
+				:unvisited-locations (copy-hash-table (state-unvisited-locations state))
 				:number-unvisited-locations (state-number-unvisited-locations state)
-				:remaining-tour-length      (copy-array (state-remaining-tour-length state))
-				:remaining-capacity         (copy-array (state-remaining-capacity state))))
+				:remaining-tour-length (copy-array (state-remaining-tour-length state))
+				:remaining-capacity (copy-array (state-remaining-capacity state))))
 
 (defun change-array-copy (arr pos new-val)
 	"Change a pos (position) in arr (array) to new-val (new value) and return a new array copy with that change"
@@ -212,7 +212,7 @@
 			(make-array (vrp-vehicles.number problem) :initial-contents
 				(let ((lst NIL))
 					(dotimes (i (vrp-vehicles.number problem) lst)
-						(setf lst (cons initial-route lst)))))
+						(setf lst (cons (copy-list initial-route) lst))))) ; copy the list otherwise the same reference is used
 		:current-vehicle 0
 		:unvisited-locations
 			(create-initial-hash (vrp-customer.locations problem))
@@ -266,21 +266,22 @@
 	"This function is used by gen-successors-insertion-method to generate a list of states that result from the insertion of "
 	(when (equalp path '(0)) (return-from gen-vehicle-states NIL))
 	(let ((cost (insertion-cost (car path) (car (cdr path)) id)))
-	(if (or (> (get-demand id) remaining-capacity) (> cost remaining-length))
-		(gen-vehicle-states id vehicle (cdr path) (1+ index)) ; then
+	(if (or (> (get-demand id) (get-remaining-capacity state vehicle)) (> cost (get-remaining-length state vehicle)))
+		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index)) ; then
 		(cons ; else
-			(let ((new-state (copy-state state)))
+			(let ((new-state (copy-full-state state)))
 			(insert-customer-on-path new-state id vehicle index cost)
 			new-state)
-		(gen-vehicle-states id vehicle (cdr path) (1+ index))))))
+		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index))))))
 
 (defun gen-successors-insertion-method (state)
-	"Generate successors states by adding each location to each vehicle path in each possible position"
-	(let ((gen-states NIL))
+	"Generate successors states by adding each location to each vehicle path in each possible position
+	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
+	(let ((gstates NIL))
 	(dolist (id (get-unvisited-customer-ids state))
 		(dotimes (vehicle (vrp-vehicles.number *vrp-data*))
-			(nconc gen-states (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state))))
-	gen-states))
+			(setf gstates (nconc gstates (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state)))))
+	gstates))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
@@ -322,7 +323,7 @@
   (flet ((faz-a-procura (problema tipo-procura
              profundidade-maxima espaco-em-arvore?)
 		(cond ((string-equal tipo-procura "a*.best.heuristic")
-				(a* (cria-problema (create-initial-state problema)
+				(a* (cria-problema (create-initial-state problema (list 0 0))
 										(list #'gen-successors-insertion-method)
 										:objectivo? #'is-goal-state
 										:custo #'insertion-cost-function
@@ -356,7 +357,6 @@
 			(- (get-internal-run-time ) tempo-inicio)
 			*nos-expandidos*
 			*nos-gerados*)))))
-
 
 ;; -----------------------------
 ;; OTHER FUNCTIONS
