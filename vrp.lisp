@@ -13,48 +13,67 @@
 ;; -----------------------------
 
 (defstruct vrp
-	name                  ; string name of the instance
-	vehicle.capacity      ; integer maximum vehicle capacity
-	vehicles.number       ; integer maximum number of vehicles (vehicle tours)
-	max.tour.length       ; float maximum tour length
-	customer.locations    ; ordered list of locations (each location has 3 elements (id x y)) the first element is the depot
-	customer.demand)      ; ordered list of demands (each demand has 2 elements (location-id demand-integer)) first element is the depot with demand value at zero
+	name               ; string name of the instance
+	vehicle.capacity   ; integer maximum vehicle capacity
+	vehicles.number    ; integer maximum number of vehicles (vehicle tours)
+	max.tour.length    ; float maximum tour length
+	customer.locations ; ordered list of locations (each location has 3 elements (id x y)) the first element is the depot
+	customer.demand)   ; ordered list of demands (each demand has 2 elements (location-id demand-integer)) first element is the depot with demand value at zero
 
 (defstruct state
-	vehicle-routes                ; array of lists containing the location history of each vehicle (current location being the first element)
-	current-vehicle               ; index of the current vehicle, nil if no vehicle is active (finished)
-	unvisited-locations           ; hash table containing only keys with city ids
-	number-unvisited-locations    ; number of unvisited cities
-	remaining-tour-length         ; array with remaining tour length for each vehicle
-	remaining-capacity)           ; array with remaining cargo for each vehicle
+	vehicle-routes             ; array of lists containing the location history of each vehicle (current location being the first element)
+	current-vehicle            ; index of the current vehicle, nil if no vehicle is active (finished)
+	transition-cost            ; cost of transitioning to this state in terms of added distance
+	unvisited-locations        ; hash table containing only keys with city ids
+	number-unvisited-locations ; number of unvisited cities
+	remaining-tour-length      ; array with remaining tour length for each vehicle
+	remaining-capacity)        ; array with remaining cargo for each vehicle
 
 ;; STATE ACCESSORS -------------------------------------
 
-(defun vehicle-route (state &optional vehicle)
+; --- getters
+(defun get-vehicle-route (state &optional vehicle)
 	"get vehicle route, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-vehicle-routes state) vehicle))
 
-(defun remaining-capacity (state &optional vehicle)
+(defun get-remaining-capacity (state &optional vehicle)
 	"get remaining capacity of a vehicle, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-capacity state) vehicle))
 
-(defun remaining-length (state &optional vehicle)
-	"get remaining length of a vehicle trip, if vehicle is omited the current vehicle is used"
+(defun get-remaining-length (state &optional vehicle)
+	"get remaining length of a vehicle route, if vehicle is omited the current vehicle is used"
 	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
 	(aref (state-remaining-tour-length state) vehicle))
-
-(defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
-	(let ((new-hash (copy-hash-table (state-unvisited-locations state))))
-		(remhash location new-hash)
-	new-hash))
 
 (defun get-current-vehicle (state)
 	(state-current-vehicle state))
 
 (defun get-unvisited-customer-ids (state)
 	(loop for key being the hash-keys of (state-unvisited-locations state) collect key))
+
+; --- setters
+(defun set-vehicle-route (state route &optional vehicle)
+	"set vehicle route, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
+	(setf (aref (state-vehicle-routes state) vehicle) route))
+
+(defun set-remaining-capacity (state new-cap &optional vehicle)
+	"set remaining capacity of a vehicle, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
+	(setf (aref (state-remaining-capacity state) vehicle) new-cap))
+
+(defun set-remaining-length (state new-len &optional vehicle)
+	"set remaining length of a vehicle route, if vehicle is omited the current vehicle is used"
+	(if (null vehicle) (setf vehicle (get-current-vehicle state)))
+	(setf (aref (state-remaining-tour-length state) vehicle) new-len))
+
+; --- others
+(defun remove-location (state location) ; NOTE this returns a copy of the hash table with the element deleted
+	(let ((new-hash (copy-hash-table (state-unvisited-locations state))))
+		(remhash location new-hash)
+	new-hash))
 
 ;; -----------------------------
 ;; GLOBAL
@@ -125,11 +144,53 @@
 		(maphash #'(lambda(key value) (setf (gethash key new-table) value)) table)
 	new-table))
 
+(defun copy-full-state (state)
+	"Create a full copy of a state"
+	(make-state :vehicle-routes (let ((n (copy-array (state-vehicle-routes state)))) (dotimes (i (vrp-vehicles.number *vrp-data*)) (setf (aref n i) (copy-list (aref n i)))) n) ; because copy-array doesn't make copy of the lists...
+				:current-vehicle (state-current-vehicle state)
+				:unvisited-locations (copy-hash-table (state-unvisited-locations state))
+				:number-unvisited-locations (state-number-unvisited-locations state)
+				:remaining-tour-length (copy-array (state-remaining-tour-length state))
+				:remaining-capacity (copy-array (state-remaining-capacity state))))
+
 (defun change-array-copy (arr pos new-val)
 	"Change a pos (position) in arr (array) to new-val (new value) and return a new array copy with that change"
 	(let ((new-arr (copy-array arr)))
 		(setf (aref new-arr pos) new-val)
 	new-arr))
+
+(defun invalid-vehicle (state vehicle)
+	(or (>= vehicle (length (state-vehicle-routes state))) (< vehicle 0)))
+
+(defun invalid-index (vehicle-route index)
+	(or (> index (length vehicle-route)) (< index 0)))
+
+(defun insert-customer-on-path (state id vehicle index added-length)
+	"Insert a customer ID in given vehicle path at specific index, added-length should contain how much the route will be increased"
+	(if (invalid-vehicle state vehicle)
+		(error "~S is not a valid vehicle-id." vehicle)
+		(let ((vehicle-route (get-vehicle-route state vehicle)))
+			(if (invalid-index vehicle-route index)
+				(error "Index out-of-range [input: ~D, Maxlength: ~D] in vehicle-route of vehicle ~D." index (length vehicle-route) vehicle)
+				(progn
+					(if (= index 0) ; push normal
+						(push id vehicle-route)
+						(push id (cdr (nthcdr (1- index) vehicle-route))))
+					; update the state accordingly
+					(set-vehicle-route state vehicle-route vehicle)
+					(set-remaining-capacity state (- (get-remaining-capacity state vehicle) (get-demand id)) vehicle)
+					(set-remaining-length state (- (get-remaining-length state vehicle) added-length) vehicle)
+					(setf (state-transition-cost state) added-length)
+					(setf (state-unvisited-locations state) (remove-location state id))
+					(setf (state-number-unvisited-locations state) (1- (state-number-unvisited-locations state))))))))
+
+(defun insertion-cost (a b c)
+	"Calculate cost in terms of aditional length when inserting c between a and b, Cost = c[a-c] + c[b-c] - c[a-b]
+	NOTE LESS is BETTER"
+	(let ((dac (distance (get-location a) (get-location c)))
+		  (dbc (distance (get-location b) (get-location c)))
+		  (dab (distance (get-location a) (get-location b))))
+		(- (+ dac dbc) dab)))
 
 ;; -----------------------------
 ;; OPERATOR AND GOAL FUNCTION
@@ -140,7 +201,7 @@
 		(dolist (item (rest locations) h)
 			(setf (gethash (car item) h) nil))))
 
-(defun create-initial-state (problem)
+(defun create-initial-state (problem &optional (initial-route (list 0)))
 	"Create a state from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
@@ -148,7 +209,10 @@
 	(set-demanding-customer problem)
   	(make-state
 		:vehicle-routes
-			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (list 0)))
+			(make-array (vrp-vehicles.number problem) :initial-contents
+				(let ((lst NIL))
+					(dotimes (i (vrp-vehicles.number problem) lst)
+						(setf lst (cons (copy-list initial-route) lst))))) ; copy the list otherwise the same reference is used
 		:current-vehicle 0
 		:unvisited-locations
 			(create-initial-hash (vrp-customer.locations problem))
@@ -159,7 +223,7 @@
 		:remaining-capacity
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem)))))
 
-(defun gen-successors (state)
+(defun gen-successors (state) ; TODO make a copy of the state and change its values with the setter functions
 	"Generates the successor states of a given state"
 	(let ((cv (get-current-vehicle state))
 		  (cv-location NIL)
@@ -169,15 +233,15 @@
 	;; Return null to force backtracking.
 	(if (null cv)
 		(return-from gen-successors NIL)
-		(setf cv-location (get-location (car (vehicle-route state cv)))))
+		(setf cv-location (get-location (car (get-vehicle-route state cv)))))
 
 	(dolist (customer-id (get-unvisited-customer-ids state))
 		(let* ((customer-location (get-location customer-id))
-			   (rem-tour-len (- (remaining-length state cv) (distance cv-location customer-location)))
-			   (rem-capacity (- (remaining-capacity state cv) (get-demand customer-id))))
+			   (rem-tour-len (- (get-remaining-length state cv) (distance cv-location customer-location)))
+			   (rem-capacity (- (get-remaining-capacity state cv) (get-demand customer-id))))
 			(if (and (>= rem-tour-len (distance customer-location (get-depot-location))) (>= rem-capacity 0))
 				(setf generated-states
-					(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons customer-id (vehicle-route state cv)))
+					(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons customer-id (get-vehicle-route state cv)))
 									  :current-vehicle (state-current-vehicle state)
 									  :unvisited-locations (remove-location state customer-id)
 									  :number-unvisited-locations (1- (state-number-unvisited-locations state))
@@ -187,8 +251,8 @@
 
 	;; If generated-states is null then there are no other positions that that particular vehicle can travel to.
 	;; Must return to depot.
-(if (null generated-states)
-		(cons (make-state   :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons 0 (vehicle-route state cv))) ; has to go back to the depot
+	(if (null generated-states)
+		(cons (make-state   :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons 0 (get-vehicle-route state cv))) ; has to go back to the depot
 							:current-vehicle (if (not (>= (1+ (state-current-vehicle state)) (vrp-vehicles.number *vrp-data*))) (1+ (state-current-vehicle state)) nil)
 							:unvisited-locations 		(state-unvisited-locations state)
 							:number-unvisited-locations (state-number-unvisited-locations state)
@@ -197,6 +261,28 @@
 						  generated-states)
 		generated-states)
 	))
+
+(defun gen-vehicle-states (id vehicle path state &key (index 1))
+	"This function is used by gen-successors-insertion-method to generate a list of states that result from the insertion of "
+	(when (equalp path '(0)) (return-from gen-vehicle-states NIL))
+	(let ((cost (insertion-cost (car path) (car (cdr path)) id)))
+	(if (or (> (get-demand id) (get-remaining-capacity state vehicle)) (> cost (get-remaining-length state vehicle)))
+		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index)) ; then
+		(cons ; else
+			(let ((new-state (copy-full-state state)))
+			(insert-customer-on-path new-state id vehicle index cost)
+			new-state)
+		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index))))))
+
+(defun gen-successors-insertion-method (state)
+	"Generate successors states by adding each location to each vehicle path in each possible position
+	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
+	(log-state state) ; PLACEHOLDER
+	(let ((gstates NIL))
+	(dolist (id (get-unvisited-customer-ids state))
+		(dotimes (vehicle (vrp-vehicles.number *vrp-data*))
+			(setf gstates (nconc gstates (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state)))))
+	gstates))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
@@ -217,10 +303,15 @@
 (defun cost-function (state)
 	"This function gives the cost of a state"
 	(let* ((cv (get-current-vehicle state))
-		  (cv-id (car (vehicle-route state cv)))
-		  (distance-gethere (if (equalp cv-id 0) 0 (distance (get-location cv-id) (get-location (cadr (vehicle-route state cv)))))) ; TODO if this cost function turns out to be viable this value should be saved to the state since its calculated when generating it
-		  (demand-gethere (if (equalp cv-id 0) 0 (get-demand (car (vehicle-route state cv))))))
+		  (cv-id (car (get-vehicle-route state cv)))
+		  (distance-gethere (if (equalp cv-id 0) 0 (distance (get-location cv-id) (get-location (cadr (get-vehicle-route state cv)))))) ; TODO if this cost function turns out to be viable this value should be saved to the state since its calculated when generating it
+		  (demand-gethere (if (equalp cv-id 0) 0 (get-demand (car (get-vehicle-route state cv))))))
 		(+ (- *demanding-customer* demand-gethere) (* 1.5 distance-gethere))))
+
+(defun insertion-cost-function (state)
+	"Gives a cost of a state based on its transition cost,
+		(the cost of the inserting the last costumer i.e. the added distance introduced by the insertion)"
+	(state-transition-cost state))
 
 ;; -----------------------------
 ;; SOLVE FUNCTION
@@ -233,10 +324,10 @@
   (flet ((faz-a-procura (problema tipo-procura
              profundidade-maxima espaco-em-arvore?)
 		(cond ((string-equal tipo-procura "a*.best.heuristic")
-				(a* (cria-problema (create-initial-state problema)
-										(list #'gen-successors)
+				(a* (cria-problema (create-initial-state problema (list 0 0))
+										(list #'gen-successors-insertion-method)
 										:objectivo? #'is-goal-state
-										:custo #'cost-function
+										:custo #'insertion-cost-function
 										:heuristica #'heuristic)
 					:espaco-em-arvore? espaco-em-arvore?))
 			((string-equal tipo-procura "a*.best.alternative.heuristic")
@@ -251,9 +342,8 @@
 			((string-equal tipo-procura "simulated.annealing.or.genetic.algoritm")
 				(simulated-annealing
 					(create-problem-simulated-annealing
-						(create-initial-state problema)
-						;#'gen-successors
-						#'get-first-solution ; PLACEHOLDER
+						(initial-solution (create-initial-state problema (list 0 0)))
+						#'neighbor-states
 						:schedule #'exponential-multiplicative-cooling
 						:state-value #'state-value)))
 		((string-equal tipo-procura "best.approach")
@@ -268,7 +358,6 @@
 			(- (get-internal-run-time ) tempo-inicio)
 			*nos-expandidos*
 			*nos-gerados*)))))
-
 
 ;; -----------------------------
 ;; OTHER FUNCTIONS
