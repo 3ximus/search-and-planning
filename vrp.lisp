@@ -338,7 +338,9 @@
 										:heuristica #'alternative-heuristic)
 					:espaco-em-arvore? espaco-em-arvore?))
 			((string-equal tipo-procura "iterative.sampling")
-				(iterative-sampling (create-initial-state problema)))  ; TODO
+				(iterative-sampling 
+					(create-initial-state problema)
+					:gen-successors #'gen-successors))  
 			((string-equal tipo-procura "simulated.annealing.or.genetic.algoritm")
 				(simulated-annealing
 					(create-problem-simulated-annealing

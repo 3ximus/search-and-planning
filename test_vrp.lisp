@@ -41,7 +41,15 @@
 ;(trace cost-function)
 ;(write (vrp *vrp-prob* "a*.best.heuristic"))
 
-(setf result (write (vrp *vrp-prob* "iterative.sampling")))
+; ===================================
+; Iterative sampling Testing
+
+(iterative-sampling (create-initial-state *vrp-prob*) :gen-successors #'gen-successors :max-sol-number 100)
+;(iterative-sampling (create-initial-state *vrp-prob*) :gen-successors #'gen-successors)
+;(iterative-sampling (create-initial-state *vrp-prob* (list 0 0)) :gen-successors #'gen-successors-insertion-method)
+; ===================================
+
+
 ;(trace exponential-multiplicative-cooling)
 ;(trace initial-solution)
 ;(trace gen-successors-insertion-method)
@@ -50,7 +58,7 @@
 ; (setf result (vrp *vrp-prob* "a*.best.heuristic"))
 
 ;(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
-(write result)
+;(write result)
 
 ; ===================================
-(log-state result)
+;(log-state result)
