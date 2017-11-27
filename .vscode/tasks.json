@@ -7,6 +7,12 @@
 			"label": "clisp (load vrp file into clisp)",
 			"type": "shell",
 			"command": "clisp -i -q vrp.lisp",
+			"problemMatcher": []
+		},
+		{
+			"label": "run tests",
+			"type": "shell",
+			"command": "clisp -q test_vrp.lisp",
 			"problemMatcher": [],
 			"group": {
 				"kind": "build",
@@ -14,9 +20,9 @@
 			}
 		},
 		{
-			"label": "run tests",
+			"label": "run tests and launch GRAPH",
 			"type": "shell",
-			"command": "clisp -q test_vrp.lisp",
+			"command": "clisp -q test_vrp.lisp && python3 graph_view.py",
 			"problemMatcher": [],
 			"group": {
 				"kind": "test",

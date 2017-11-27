@@ -1,2 +1,4 @@
 *.fas
 *.lib
+out.txt
+search_graph.html
