@@ -34,7 +34,7 @@
 (defun assess-path-insertions (id path remaining-length remaining-capacity &key (index 1))
 	"Verify all insertions in path and returns the best one, takes remaining length and capacity into account"
 	(when (equalp path '(0)) (return-from assess-path-insertions (values most-positive-fixnum index))) ; returns largest number possible
-	(let ((cost (insertion-cost (car path) (car (cdr path)) id)))
+	(let ((cost (insertion-cost (car path) (cadr path) id)))
 		(multiple-value-bind (rest-cost rest-index) (assess-path-insertions id (cdr path) remaining-length remaining-capacity :index (1+ index))
 			; verify remaining length and capacity, if not enough return large cost so it doesn't get selected
  			(when (or (> (get-demand id) remaining-capacity) (< remaining-length cost)) (return-from assess-path-insertions (values most-positive-fixnum index)))

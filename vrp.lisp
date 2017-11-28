@@ -24,6 +24,7 @@
 	vehicle-routes             ; array of lists containing the location history of each vehicle (current location being the first element)
 	current-vehicle            ; index of the current vehicle, nil if no vehicle is active (finished)
 	transition-cost            ; cost of transitioning to this state in terms of added distance
+	inserted-pair              ; pair inserted (vehicle customer)
 	unvisited-locations        ; hash table containing only keys with city ids
 	number-unvisited-locations ; number of unvisited cities
 	remaining-tour-length      ; array with remaining tour length for each vehicle
@@ -81,6 +82,7 @@
 
 (defvar *vrp-data*) ; backup of the problem data
 (defvar *customer-hash*)
+(defvar *vector-slices*)
 
 ; These values will be used as reference for cost and heuristic as the value
 (defvar *farthest-customer*) ; will hold the largest distance from the depot
@@ -181,6 +183,7 @@
 					(set-remaining-capacity state (- (get-remaining-capacity state vehicle) (get-demand id)) vehicle)
 					(set-remaining-length state (- (get-remaining-length state vehicle) added-length) vehicle)
 					(setf (state-transition-cost state) added-length)
+					(setf (state-inserted-pair state) (list vehicle id))
 					(setf (state-unvisited-locations state) (remove-location state id))
 					(setf (state-number-unvisited-locations state) (1- (state-number-unvisited-locations state))))))))
 
@@ -205,6 +208,7 @@
 	"Create a state from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
+	(setf *vector-slices* (make-array (vrp-vehicles.number *vrp-data*) :initial-contents (generate-circle-slices (vrp-vehicles.number *vrp-data*))))
 	(set-farthest-customer problem)
 	(set-demanding-customer problem)
   	(make-state
@@ -243,6 +247,7 @@
 				(setf generated-states
 					(cons (make-state :vehicle-routes (change-array-copy (state-vehicle-routes state) cv (cons customer-id (get-vehicle-route state cv)))
 									  :current-vehicle (state-current-vehicle state)
+									  :inserted-pair (list cv customer-id)
 									  :unvisited-locations (remove-location state customer-id)
 									  :number-unvisited-locations (1- (state-number-unvisited-locations state))
 									  :remaining-tour-length (change-array-copy	(state-remaining-tour-length state) cv rem-tour-len)
@@ -265,8 +270,9 @@
 (defun gen-vehicle-states (id vehicle path state &key (index 1))
 	"This function is used by gen-successors-insertion-method to generate a list of states that result from the insertion of "
 	(when (equalp path '(0)) (return-from gen-vehicle-states NIL))
-	(let ((cost (insertion-cost (car path) (car (cdr path)) id)))
-	(if (or (> (get-demand id) (get-remaining-capacity state vehicle)) (> cost (get-remaining-length state vehicle)))
+	(let ((cost (insertion-cost (car path) (cadr path) id)))
+ 	; this last comparison is used to reduce number of generated states since it was a problem before
+	(if (or (> (get-demand id) (get-remaining-capacity state vehicle)) (> cost (get-remaining-length state vehicle)) (> cost (/ *farthest-customer* 3)))
 		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index)) ; then
 		(cons ; else
 			(let ((new-state (copy-full-state state)))
@@ -285,10 +291,14 @@
 	"Generate successors states by adding each location to each vehicle path in each possible position
 	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
 	(log-state state) ; PLACEHOLDER
+	(print *nos-expandidos*)
+	;(break )
 	(let ((gstates NIL))
 	(dolist (id (get-unvisited-customer-ids state))
-		(dotimes (vehicle (usable-vehicles state))
+		;(dotimes (vehicle (usable-vehicles state))
+		(dotimes (vehicle 5)
 			(setf gstates (nconc gstates (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state)))))
+	;(print (length gstates))
 	gstates))
 
 (defun is-goal-state (state)
@@ -299,21 +309,38 @@
 ;; HEURISTICS AND COST FUNCTIONS
 ;; -----------------------------
 
+(defun generate-circle-slices (vn)
+	"Geretas list of vn simetric slices, in which vn is the number of vehicles"
+	(let* ((v1 '(5 0)) (vlist (list v1)) (angle 0) (increment (/ 360 vn)))
+	(dotimes (i (1- vn))
+		(incf angle increment)
+		(let* ((rad_ang (/ (* angle pi) 180))
+				(x (- (* (car v1) (cos rad_ang)) (* (cadr v1) (sin rad_ang))))
+				(y (+ (* (car v1) (sin rad_ang)) (* (cadr v1) (cos rad_ang)))))
+		(nconc vlist (list (list x y)))))
+	vlist))
+
+(defun get-arc-distance (point vector)
+	"Returns the size of the arc from point to vector"
+	; this function uses the law of cosines ->   cos(x) = ( r^2 + R^2 - d^2 ) / ( 2rR )
+	;  where r and R are distance from (0,0) to a point, d is the distance between them and x is the angle at (0,0) between the 2 edges leading to both points
+	(let ((p-distance (distance '(0 0) point))
+		  (v-size (distance '(0 0) vector))
+		  (v-p-distance (distance point vector)))
+	(setf cos-x (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size)))
+	(* p-distance (acos cos-x))))
+
 (defun heuristic (state)
-	0)
+	(when (null (state-inserted-pair state)) (return-from heuristic 0))
+	(let ((slice-vector (aref *vector-slices* (car (state-inserted-pair state)))))
+	(get-arc-distance (get-location (cadr (state-inserted-pair state))) slice-vector)))
 
 (defun alternative-heuristic (state)
 	0)
 
-; The cost is calculated by adding the distance to get to this state from the previous and the diference to the maximum demand (it should have lower costs for customers with high demand)
-; NOTE @AndreSobral since distance is more important i gave it a factor of 1.5 -- if this remains it must be tweaked
 (defun cost-function (state)
 	"This function gives the cost of a state"
-	(let* ((cv (get-current-vehicle state))
-		  (cv-id (car (get-vehicle-route state cv)))
-		  (distance-gethere (if (equalp cv-id 0) 0 (distance (get-location cv-id) (get-location (cadr (get-vehicle-route state cv)))))) ; TODO if this cost function turns out to be viable this value should be saved to the state since its calculated when generating it
-		  (demand-gethere (if (equalp cv-id 0) 0 (get-demand (car (get-vehicle-route state cv))))))
-		(+ (- *demanding-customer* demand-gethere) (* 1.5 distance-gethere))))
+	0)
 
 (defun insertion-cost-function (state)
 	"Gives a cost of a state based on its transition cost,
@@ -345,9 +372,9 @@
 										:heuristica #'alternative-heuristic)
 					:espaco-em-arvore? espaco-em-arvore?))
 			((string-equal tipo-procura "iterative.sampling")
-				(iterative-sampling 
+				(iterative-sampling
 					(create-initial-state problema)
-					:gen-successors #'gen-successors))  
+					:gen-successors #'gen-successors))
 			((string-equal tipo-procura "simulated.annealing.or.genetic.algoritm")
 				(simulated-annealing
 					(create-problem-simulated-annealing
