@@ -274,13 +274,20 @@
 			new-state)
 		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index))))))
 
+(defun usable-vehicles (state)
+	"Returns the amount of free vehicles to use (counts one with empty path and discards the rest)"
+	(let ((stop NIL))
+	(dotimes (i (vrp-vehicles.number *vrp-data*))
+		(when (equalp (aref (state-vehicle-routes state) i) '(0 0))
+			(if stop (return i) (setf stop T))))))
+
 (defun gen-successors-insertion-method (state)
 	"Generate successors states by adding each location to each vehicle path in each possible position
 	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
 	(log-state state) ; PLACEHOLDER
 	(let ((gstates NIL))
 	(dolist (id (get-unvisited-customer-ids state))
-		(dotimes (vehicle (vrp-vehicles.number *vrp-data*))
+		(dotimes (vehicle (usable-vehicles state))
 			(setf gstates (nconc gstates (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state)))))
 	gstates))
 
