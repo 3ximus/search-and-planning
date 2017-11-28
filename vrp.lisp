@@ -305,6 +305,71 @@
 (defun alternative-heuristic (state)
 	0)
 
+
+(defun select-customer-seeds (customers vrp-prob)
+	(let* ((seeds NIL)
+		   (points_quad (let ((lst NIL))
+							(dotimes (i (vrp-vehicles.number problem) lst)
+								(setf lst (cons (list) lst)))))
+
+		   (demands       (rest  (vrp-customer.demand vrp-prob)))
+		   (demands_sum   (apply '+ (mapcar #'second demands))) 
+		   (nr-vehicles  (vrp-vehicles.number vrp-prob))
+		   (vehicle-capacity (vrp-vehicles.number vrp-prob))
+		   (fraction (/ demands_sum (* nr-vehicles vehicle.capacity)))
+		   (aux_sum 0)
+		   (counter 0))
+
+	(dolist (demand demands)
+		(if (> (+ aux_sum (second demand) (* fraction vehicle-capacity)))
+			(progn
+				(setf aux_sum (second demand))
+				(incf counter)))
+		(setf (nth counter points_quad) (cons (rest (nth (- (first demand) 1) customers)) (nth counter points_quad))))
+
+
+
+)
+
+;; Retorna routes para cada veiculo
+(defun generalized-assignment (vrp-prob)
+	(let* ((customers (rest  (vrp-customer.locations vrp-prob)))
+		   (depot     (first (vrp-customer.locations vrp-prob)))
+		   (seeds  (select-customer-seeds customers vrp-prob))
+		   (routes (let ((lst NIL))
+						(dotimes (i (vrp-vehicles.number problem) lst)
+							(setf lst (cons (list 0) lst))))))
+
+		(dolist (customer customers routes)
+			(push (first customer)  (nth (generalized-assignment-customer seeds (rest customer) (rest depot)) routes)))
+		(dolist (route routes routes)
+			(push 0 route))))
+
+
+;; Retorna id do veiculo ao qual foi assigned o customer
+(defun generalized-assignment-customer (seeds customer depot)
+	(let ((min_dik 99999)
+		  (tmp 0)
+		  (counter 0)
+		  (vehicle-id  0))
+
+	(dolist (seed seeds vehicle-id)
+		(setf tmp (generalized-assignment-heuristic seed customer depot))
+		(if (< tmp min_dik)
+			(progn
+				(setf min_dik tmp)
+				(setf vehicle-id counter)))
+		(incf counter))))
+
+;; Retorna o valor dik de um customer para um determinado seed
+(defun generalized-assignment-heuristic (seed customer depot)
+	(let ((d1 0)
+		  (d2 0))
+	(setf d1 (+ (distance depot customer) (distance customer seed) (distance seed depot)))
+	(setf d2 (+ (distance depot seed)	  (distance seed customer) (distance customer depot)))
+	(- (min d1 d2) (+ (distance depot seed) (distance seed depot)))))
+
+
 ; The cost is calculated by adding the distance to get to this state from the previous and the diference to the maximum demand (it should have lower costs for customers with high demand)
 ; NOTE @AndreSobral since distance is more important i gave it a factor of 1.5 -- if this remains it must be tweaked
 (defun cost-function (state)
