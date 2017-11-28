@@ -33,12 +33,14 @@ with open('out.txt', 'r') as fd:
 				if line == '\n': break
 				data_points = add_data_points(line, data_points)
 		if ":VEHICLE-ROUTES" in line:
+			line = line[:line.index(':',15)] # remove the remainder of the line after the second found ':'
 			paths = add_paths(line, paths)
 			for line in fd:
-				if ':NUMBER-UNVISITED-LOCATIONS' in line: break
+				if ':NUMBER-UNVISITED-LOCATIONS' in line or ':INSERTED-PAIR' in line: break
 				paths = add_paths(line, paths)
 
 ## PLOT THINGS
+print(paths)
 
 node_trace = Scatter(
 	x=[], y=[], text=[], mode='markers', name='Locations', textposition='bottom',

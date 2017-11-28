@@ -292,11 +292,10 @@
 	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
 	(log-state state) ; PLACEHOLDER
 	(print *nos-expandidos*)
-	;(break )
+	(break )
 	(let ((gstates NIL))
 	(dolist (id (get-unvisited-customer-ids state))
-		;(dotimes (vehicle (usable-vehicles state))
-		(dotimes (vehicle 5)
+		(dotimes (vehicle (usable-vehicles state))
 			(setf gstates (nconc gstates (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state)))))
 	;(print (length gstates))
 	gstates))
@@ -311,21 +310,21 @@
 
 (defun generate-circle-slices (vn)
 	"Geretas list of vn simetric slices, in which vn is the number of vehicles"
-	(let* ((v1 '(5 0)) (vlist (list v1)) (angle 0) (increment (/ 360 vn)))
+	(let ((v1 '(5 0)) (vlist nil) (angle 0) (increment (/ 360 vn)) (dpl (get-depot-location)))
 	(dotimes (i (1- vn))
 		(incf angle increment)
 		(let* ((rad_ang (/ (* angle pi) 180))
 				(x (- (* (car v1) (cos rad_ang)) (* (cadr v1) (sin rad_ang))))
 				(y (+ (* (car v1) (sin rad_ang)) (* (cadr v1) (cos rad_ang)))))
-		(nconc vlist (list (list x y)))))
-	vlist))
+		(setf vlist (nconc vlist (list (list (+ x (car dpl)) (+ y (cadr dpl)))))))) ; append and translate vector to correct coordinates
+	(cons (list (+ (car dpl) (car v1)) (+ (cadr dpl) (cadr v1))) vlist)))
 
 (defun get-arc-distance (point vector)
 	"Returns the size of the arc from point to vector"
 	; this function uses the law of cosines ->   cos(x) = ( r^2 + R^2 - d^2 ) / ( 2rR )
 	;  where r and R are distance from (0,0) to a point, d is the distance between them and x is the angle at (0,0) between the 2 edges leading to both points
-	(let ((p-distance (distance '(0 0) point))
-		  (v-size (distance '(0 0) vector))
+	(let ((p-distance (distance (get-depot-location) point))
+		  (v-size (distance (get-depot-location) vector))
 		  (v-p-distance (distance point vector)))
 	(setf cos-x (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size)))
 	(* p-distance (acos cos-x))))
