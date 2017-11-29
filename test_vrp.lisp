@@ -53,11 +53,11 @@
 ;(trace exponential-multiplicative-cooling)
 ;(trace initial-solution)
 ;(trace gen-successors-insertion-method)
-(trace get-arc-distance)
+;(trace get-arc-distance)
 ;(trace gen-successors-insertion-method)
-(setf result (vrp *vrp-prob* "a*.best.heuristic"))
+;(setf result (vrp *vrp-prob* "a*.best.heuristic"))
 
-;(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
+(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
 (write result)
 
 ; ===================================

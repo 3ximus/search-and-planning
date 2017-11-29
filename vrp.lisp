@@ -134,6 +134,10 @@
 	"Calculates Euclidean distance between 2 locations"
 	(sqrt (+ (expt (- (cadr locationB) (cadr locationA)) 2) (expt (- (car locationB) (car locationA)) 2))))
 
+(defun op-2d (op v1 v2)
+	"Apply op to both vectors"
+	(list (funcall op (car v1) (car v2)) (funcall op (cadr v1) (cadr v2))))
+
 (defun copy-vrp (vrp-prob)
 	(make-vrp :name 			  (vrp-name vrp-prob)
 			  :vehicle.capacity   (vrp-vehicle.capacity vrp-prob)
@@ -268,11 +272,11 @@
 	))
 
 (defun gen-vehicle-states (id vehicle path state &key (index 1))
-	"This function is used by gen-successors-insertion-method to generate a list of states that result from the insertion of "
+	"This function is used by gen-successors-insertion-method to generate a list of states that result from the insertion of an id at each step of the path"
 	(when (equalp path '(0)) (return-from gen-vehicle-states NIL))
 	(let ((cost (insertion-cost (car path) (cadr path) id)))
  	; this last comparison is used to reduce number of generated states since it was a problem before
-	(if (or (> (get-demand id) (get-remaining-capacity state vehicle)) (> cost (get-remaining-length state vehicle)) (> cost (/ *farthest-customer* 3)))
+	(if (or (> (get-demand id) (get-remaining-capacity state vehicle)) (> cost (get-remaining-length state vehicle)) (> cost (/ *farthest-customer* 2)))
 		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index)) ; then
 		(cons ; else
 			(let ((new-state (copy-full-state state)))
@@ -292,13 +296,18 @@
 	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
 	(log-state state) ; PLACEHOLDER
 	(print *nos-expandidos*)
-	(break )
+	;(break )
 	(let ((gstates NIL))
 	(dolist (id (get-unvisited-customer-ids state))
 		(dotimes (vehicle (usable-vehicles state))
 			(setf gstates (nconc gstates (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state)))))
 	;(print (length gstates))
 	gstates))
+
+(defun gen-successors-hybrid-approach (state)
+	(let ((gstates NIL) (cv (get-current-vehicle state)))
+	(dolist (id (get-unvisited-customer-ids state))
+	)))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
@@ -316,8 +325,8 @@
 		(let* ((rad_ang (/ (* angle pi) 180))
 				(x (- (* (car v1) (cos rad_ang)) (* (cadr v1) (sin rad_ang))))
 				(y (+ (* (car v1) (sin rad_ang)) (* (cadr v1) (cos rad_ang)))))
-		(setf vlist (nconc vlist (list (list (+ x (car dpl)) (+ y (cadr dpl)))))))) ; append and translate vector to correct coordinates
-	(cons (list (+ (car dpl) (car v1)) (+ (cadr dpl) (cadr v1))) vlist)))
+		(setf vlist (nconc vlist (list (op-2d #'+ (list x y) dpl)))))) ; append and translate vector to correct coordinates
+	(cons (op-2d #'+ v1 dpl) vlist)))
 
 (defun get-arc-distance (point vector)
 	"Returns the size of the arc from point to vector"
@@ -333,6 +342,7 @@
 	(when (null (state-inserted-pair state)) (return-from heuristic 0))
 	(let ((slice-vector (aref *vector-slices* (car (state-inserted-pair state)))))
 	(get-arc-distance (get-location (cadr (state-inserted-pair state))) slice-vector)))
+	; TODO add the average of traveled distance here to favor longer paths
 
 (defun alternative-heuristic (state)
 	0)
