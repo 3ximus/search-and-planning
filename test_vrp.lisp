@@ -44,7 +44,7 @@
 ; ===================================
 ; Iterative sampling Testing
 
-(iterative-sampling (create-initial-state *vrp-prob*) :gen-successors #'gen-successors :max-sol-number 100)
+;(iterative-sampling (create-initial-state *vrp-prob*) :gen-successors #'gen-successors :max-sol-number 100)
 ;(iterative-sampling (create-initial-state *vrp-prob*) :gen-successors #'gen-successors)
 ;(iterative-sampling (create-initial-state *vrp-prob* (list 0 0)) :gen-successors #'gen-successors-insertion-method)
 ; ===================================
@@ -53,9 +53,20 @@
 ;(trace exponential-multiplicative-cooling)
 ;(trace initial-solution)
 ;(trace gen-successors-insertion-method)
-;(trace gen-successors)
-;(trace cost-function)
-; (setf result (vrp *vrp-prob* "a*.best.heuristic"))
+;(trace get-arc-distance)
+;(trace gen-successors-insertion-method)
+;(setf result (vrp *vrp-prob* "a*.best.heuristic"))
+
+
+
+
+
+
+
+(setf result (generalized-assignment *vrp-prob*))
+(format T "~%~% general assignment result: ~%")
+(dolist (route result)
+	(format T "~D~%" route))
 
 ;(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
 ;(write result)
