@@ -347,7 +347,7 @@
 
 (defun get-arc-distance (point vector)
 	"Returns the size of the arc from point to vector"
-	(* (distance (get-depot-location) point) (get-angle point vector))
+	(* (distance (get-depot-location) point) (get-angle point vector)))
 
 (defun heuristic (state)
 	(when (null (state-inserted-pair state)) (return-from heuristic 0))
