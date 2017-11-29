@@ -31,25 +31,39 @@
 	"Returns true with probability e^ΔE/T"
 	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
+(defun are-clockwise (v1 v2)
+	(>  (+ (* (- (car v1)) (cadr v2)) (* (cadr v1) (car v2))) 0))
+
+(defun is-inside-sector (vehicle id)
+	"Each vehicle has its own sector therefore this returns if id belongs to that sector"
+	(let ((sector-start (op-2d #'- (aref *vector-slices* vehicle) (get-depot-location)))
+			(sector-end (op-2d #'- (aref *vector-slices* (mod (1+ vehicle) (vrp-vehicles.number *vrp-data*))) (get-depot-location)))
+			(customer-location (op-2d #'- (get-location id) (get-depot-location))))
+		(and (are-clockwise sector-end customer-location) (not (are-clockwise sector-start customer-location)))))
+
 (defun assess-path-insertions (id path remaining-length remaining-capacity &key (index 1))
 	"Verify all insertions in path and returns the best one, takes remaining length and capacity into account"
-	(when (equalp path '(0)) (return-from assess-path-insertions (values most-positive-fixnum index))) ; returns largest number possible
+	(when (equalp path '(0)) (return-from assess-path-insertions (values most-positive-fixnum nil))) ; returns largest number possible
 	(let ((cost (insertion-cost (car path) (cadr path) id)))
 		(multiple-value-bind (rest-cost rest-index) (assess-path-insertions id (cdr path) remaining-length remaining-capacity :index (1+ index))
 			; verify remaining length and capacity, if not enough return large cost so it doesn't get selected
- 			(when (or (> (get-demand id) remaining-capacity) (< remaining-length cost)) (return-from assess-path-insertions (values most-positive-fixnum index)))
+			;(format t "~F[~D] . ~F[~D]  | L ~D C ~D~%" cost index rest-cost rest-index remaining-length remaining-capacity)
+ 			(when (or (> (get-demand id) remaining-capacity) (< remaining-length cost))
+				(if (null rest-index) ; if a valid solution hasn't been found
+					(return-from assess-path-insertions (values most-positive-fixnum nil))) ; then still wont be it
+					(return-from assess-path-insertions (values rest-cost rest-index))) ; else pass previous solution
 			; decide if we return the cost gathered by recursion or the current one
-			;(format t "~F[~D] . ~F[~D]~%" cost index rest-cost rest-index)
 			(if (< cost rest-cost) (values cost index) (values rest-cost rest-index)))))
 
-(defun do-optimal-insertion (state id)
-	"Returns state in which the optimal insertion was done"
-	(let ((min-vcost most-positive-fixnum) (min-index nil) (min-vehicle nil))
-		(dotimes (i (vrp-vehicles.number *vrp-data*))
+(defun do-slice-insertion (state id)
+	"Insert id in the corresponding vehicle acording to slice vectors slice"
+	(dotimes (i (vrp-vehicles.number *vrp-data*))
+		(when (is-inside-sector i id)
 			(multiple-value-bind (cost index) (assess-path-insertions id (get-vehicle-route state i) (get-remaining-length state i) (get-remaining-capacity state i))
-				(when (< cost min-vcost)
-					(setf min-vcost cost) (setf min-index index) (setf min-vehicle i))))
-	(when (not (null min-vehicle)) (insert-customer-on-path state id min-vehicle min-index min-vcost))))
+				(print cost)
+				(when (< (get-remaining-length state i) cost) (return ))
+				(insert-customer-on-path state id i index cost)
+				(return )))))
 
 ;; ---------------------------------
 ;; INITIAL SOLUTION AND NEIGHBORHOOD
@@ -58,7 +72,7 @@
 (defun initial-solution (zero-state)
 	"get the first solution for the simulated annealing problem"
 	(dolist (cid (get-unvisited-customer-ids zero-state))
-		(do-optimal-insertion zero-state cid)
+		(do-slice-insertion zero-state cid)
 		(log-state zero-state)
 		(break ) ; PLACEHOLDER TESTING
 		))
@@ -71,16 +85,9 @@
 ;; VALUE OF A STATE
 ;; -----------------------------
 
-(defconstant REMAIN_TOUR_CAPACITY_FACTOR 0.2) ; used for state-value calculations as a factor for remaining tour length and vehicles capacity (should be <1 to enphasise the number of unvisited locations)
-
 (defun state-value (state)
-	(let ((remaining-tour (reduce #'+ (state-remaining-tour-length state)))
-		  (remaining-capacity (reduce #'+ (state-remaining-capacity state)))
-		  (max-capacity (* (vrp-vehicles.number *vrp-data*) (vrp-vehicle.capacity *vrp-data*)))
-		  (max-length (* (vrp-vehicles.number *vrp-data*) (vrp-max.tour.length *vrp-data*))))
-		; unvisited-locations + REMAIN_TOUR_CAPACITY_FACTOR * (max-rem-tour - remaining-tour) (max-capacity - remaining-capacity)
-		; closer to the end of the journey (length or capacity) higher the value of the state
-		(+ (state-number-unvisited-locations state) (* REMAIN_TOUR_CAPACITY_FACTOR (+ (- max-length remaining-tour) (- max-capacity remaining-capacity))))))
+	"The value of the state is the remaining length, goal states in which the vehicles traveled less have higher value"
+	(reduce #'+ (state-remaining-tour-length state)))
 
 ;; -----------------------------
 ;; COOLING SCHEDULES
