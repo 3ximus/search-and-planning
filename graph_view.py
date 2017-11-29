@@ -59,7 +59,7 @@ node_trace = Scatter(
 
 full_set = set(data_points.keys())
 reached_set = set([x for s in paths for x in s])
-for n in data_points: #set([0]).union(full_set - reached_set):
+for n in set([0]).union(full_set - reached_set):
 	node_trace['x'].append(data_points[n][0])
 	node_trace['y'].append(data_points[n][1])
 	node_trace['text'].append(str(n))
@@ -72,10 +72,20 @@ for i in clusters:
 	cluster_trace['x'].append(i[0])
 	cluster_trace['y'].append(i[1])
 
+area_trace = Scatter(
+	x=[], y=[], mode='lines', name='Cluster Areas', fill='tonext',
+	line=Line(width=1, color='#b2b2b2'))
+
+for i in clusters:
+	area_trace['x'].append(i[0])
+	area_trace['y'].append(i[1])
+	area_trace['x'].append(data_points[0][0])
+	area_trace['y'].append(data_points[0][1])
+
 edges = []
 for i, path in enumerate(paths):
 	edges.append(Scatter( x=[], y=[], name='Vehicle %d' % i, text=[],
-		line=Line( width=3, autocolorscale=True),
+		line=Line(width=3),
 		marker=Marker(size=15),
 		hoverinfo='text', mode='lines+markers'))
 	for l in range(len(path)):
@@ -86,11 +96,11 @@ for i, path in enumerate(paths):
 
 updatemenus = list([
 	dict( buttons = list([
-		dict(label="Off", method='restyle', args=['mode',['markers']+['lines+markers']*len(edges)+['markers']]),
-		dict(label="On", method='restyle', args=['mode',['markers+text']+['lines+markers']*len(edges)+['markers']]),
+		dict(label="Off", method='restyle', args=['mode',['markers', 'markers']+['lines+markers']*len(edges)]),
+		dict(label="On", method='restyle', args=['mode',['markers+text', 'markers']+['lines+markers']*len(edges)]),
 	]))])
 
-fig = Figure(data=Data([node_trace] + edges + [cluster_trace]),
+fig = Figure(data=Data([area_trace] + edges + [node_trace, cluster_trace]),
 			 layout=Layout( title='Search Graph', hovermode='closest', updatemenus=updatemenus))
 plotly.offline.plot(fig, filename='search_graph.html', auto_open=False)
 

@@ -327,7 +327,7 @@
 
 (defun generate-circle-slices (vn)
 	"Geretas list of vn simetric slices, in which vn is the number of vehicles"
-	(let ((v1 '(5 0)) (vlist nil) (angle 0) (increment (/ 360 vn)) (dpl (get-depot-location)))
+	(let ((v1 '(30 0)) (vlist nil) (angle 0) (increment (/ 360 vn)) (dpl (get-depot-location)))
 	(dotimes (i (1- vn))
 		(incf angle increment)
 		(let* ((rad_ang (/ (* angle pi) 180))
