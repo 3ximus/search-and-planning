@@ -8,12 +8,20 @@ from plotly.graph_objs import Scatter, Line, Marker, Figure, Data, Layout
 import re
 
 location_pattern = re.compile(r"[0-9]+ [0-9\.]+ [0-9\.]+")  # match locations
+<<<<<<< HEAD
 path_pattern = re.compile(r"\([0-9\ ]+\)")  # match locations
 clusters_pattern = re.compile(r"\([0-9\.]+ [0-9\.]+\)")  # match locations
 data_points = {}
 paths = []
 clusters = [] # cluster centers
 cluster_areas = []
+=======
+results_pattern = re.compile(r"\([0-9\ ]+\)")  # match locations
+clusters_pattern = re.compile(r"\([0-9\.]+ [0-9\.]+\)")  # match locations
+data_points = {}
+paths = []
+clusters = []
+>>>>>>> master
 
 # READ THINGS
 
@@ -28,7 +36,11 @@ def add_paths(string, paths):
 	paths.extend([[int(v) for v in x.strip('()').split(' ')] for x in match])
 	return paths
 
+<<<<<<< HEAD
 def add_cluster_centers(string, clusters):
+=======
+def add_clusters(string, clusters):
+>>>>>>> master
 	match = clusters_pattern.findall(string)
 	clusters.extend([[float(v) for v in x.strip('()').split(' ')] for x in match])
 	return clusters
@@ -43,6 +55,7 @@ with open('out.txt', 'r') as fd:
 		if line.startswith("ROUTES"):
 			paths = add_paths(line, paths)
 			for line in fd:
+<<<<<<< HEAD
 				if line == '\n': break
 				paths = add_paths(line, paths)
 		if line.startswith('CCENTERS'):
@@ -54,6 +67,15 @@ with open('out.txt', 'r') as fd:
 			add_paths(line, cluster_areas)
 			for line in fd:
 				add_paths(line, cluster_areas)
+=======
+				if ':NUMBER-UNVISITED-LOCATIONS' in line or ':INSERTED-PAIR' in line: break
+				if line == '\n': break
+				paths = add_paths(line, paths)
+		if line.startswith('CLUSTERS'):
+			add_clusters(line, clusters)
+			for line in fd:
+				add_clusters(line, clusters)
+>>>>>>> master
 
 ## PLOT THINGS
 
@@ -88,7 +110,11 @@ for i in clusters:
 
 edges = []
 for i, path in enumerate(paths):
+<<<<<<< HEAD
 	edges.append(Scatter( x=[], y=[], name='Vehicle %d' % i, text=[], fill='tonext',
+=======
+	edges.append(Scatter( x=[], y=[], name='Vehicle %d' % i, text=[],
+>>>>>>> master
 		line=Line(width=3),
 		marker=Marker(size=15),
 		hoverinfo='text', mode='lines+markers'))
