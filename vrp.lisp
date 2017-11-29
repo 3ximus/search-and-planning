@@ -275,7 +275,7 @@
 	"This function is used by gen-successors-insertion-method to generate a list of states that result from the insertion of an id at each step of the path"
 	(when (equalp path '(0)) (return-from gen-vehicle-states NIL))
 	(let ((cost (insertion-cost (car path) (cadr path) id)))
- 	; this last comparison is used to reduce number of generated states since it was a problem before
+ 	; NOTE this last comparison is used to reduce number of generated states since it was a problem before
 	(if (or (> (get-demand id) (get-remaining-capacity state vehicle)) (> cost (get-remaining-length state vehicle)) (> cost (/ *farthest-customer* 2)))
 		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index)) ; then
 		(cons ; else
@@ -301,13 +301,21 @@
 	(dolist (id (get-unvisited-customer-ids state))
 		(dotimes (vehicle (usable-vehicles state))
 			(setf gstates (nconc gstates (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state)))))
-	;(print (length gstates))
 	gstates))
 
 (defun gen-successors-hybrid-approach (state)
+	"Generate successors states by adding each location to the current vehicle path in each possible position
+	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
 	(let ((gstates NIL) (cv (get-current-vehicle state)))
 	(dolist (id (get-unvisited-customer-ids state))
-	)))
+		(setf gstates (nconc gstates (gen-vehicle-states id cv (get-vehicle-route state cv) state))))
+	(when (and (null gstates) (not (equalp cv (vrp-vehicles.number *vrp-data*)))) ; current vehicle couldn't fit more locations and its not the last vehicle
+		(incf cv) (setf (state-current-vehicle state) cv) ; update cv on the state
+		(dolist (id (get-unvisited-customer-ids state))
+			(setf gstates (nconc gstates (gen-vehicle-states id cv (get-vehicle-route state cv) state)))))
+	(log-state state) ; PLACEHOLDER
+	;(break )
+	gstates))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
@@ -368,7 +376,7 @@
              profundidade-maxima espaco-em-arvore?)
 		(cond ((string-equal tipo-procura "a*.best.heuristic")
 				(a* (cria-problema (create-initial-state problema (list 0 0))
-										(list #'gen-successors-insertion-method)
+										(list #'gen-successors-hybrid-approach)
 										:objectivo? #'is-goal-state
 										:custo #'insertion-cost-function
 										:heuristica #'heuristic)
