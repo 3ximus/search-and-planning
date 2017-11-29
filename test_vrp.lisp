@@ -58,18 +58,11 @@
 ;(trace gen-successors-insertion-method)
 ;(setf result (vrp *vrp-prob* "a*.best.heuristic"))
 
-
-
-
-
-
-
 (write (sweep *vrp-prob*))
-
-
 
 ;(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
 ;(write result)
+
 
 ; ===================================
 ;(log-state result)
