@@ -336,15 +336,18 @@
 		(setf vlist (nconc vlist (list (op-2d #'+ (list x y) dpl)))))) ; append and translate vector to correct coordinates
 	(cons (op-2d #'+ v1 dpl) vlist)))
 
-(defun get-arc-distance (point vector)
-	"Returns the size of the arc from point to vector"
+(defun get-angle (a b)
+	"Gets the angle at the depot between points a and b"
 	; this function uses the law of cosines ->   cos(x) = ( r^2 + R^2 - d^2 ) / ( 2rR )
 	;  where r and R are distance from (0,0) to a point, d is the distance between them and x is the angle at (0,0) between the 2 edges leading to both points
 	(let ((p-distance (distance (get-depot-location) point))
 		  (v-size (distance (get-depot-location) vector))
 		  (v-p-distance (distance point vector)))
-	(setf cos-x (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size)))
-	(* p-distance (acos cos-x))))
+	(acos (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size)))))
+
+(defun get-arc-distance (point vector)
+	"Returns the size of the arc from point to vector"
+	(* (distance (get-depot-location) point) (get-angle point vector))
 
 (defun heuristic (state)
 	(when (null (state-inserted-pair state)) (return-from heuristic 0))
