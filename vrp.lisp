@@ -7,6 +7,7 @@
 (load "iterative-sampling")
 (load "genetic")
 (load "simulated-annealing")
+(load "sweep")
 
 ;; -----------------------------
 ;; DEFINITIONS
@@ -82,7 +83,8 @@
 
 (defvar *vrp-data*) ; backup of the problem data
 (defvar *customer-hash*)
-(defvar *vector-slices*)
+(defvar *equal-slice-sectors*) ; simetrical vector coordinates
+(defvar *sweep-sectors*) ; groups of customers by capacity
 
 ; These values will be used as reference for cost and heuristic as the value
 (defvar *farthest-customer*) ; will hold the largest distance from the depot
@@ -212,7 +214,8 @@
 	"Create a state from a vrp struct"
 	(setf *vrp-data* (copy-vrp problem))
 	(setf *customer-hash* (make-customer-hash (vrp-customer.locations problem) (vrp-customer.demand problem)))
-	(setf *vector-slices* (make-array (vrp-vehicles.number *vrp-data*) :initial-contents (generate-circle-slices (vrp-vehicles.number *vrp-data*))))
+	(setf *equal-slice-sectors* (make-array (vrp-vehicles.number *vrp-data*) :initial-contents (generate-circle-slices (vrp-vehicles.number *vrp-data*))))
+	(setf *sweep-sectors* (make-array (vrp-vehicles.number *vrp-data*) :initial-contents (sweep problem)))
 	(set-farthest-customer problem)
 	(set-demanding-customer problem)
   	(make-state
@@ -275,7 +278,7 @@
 	"This function is used by gen-successors-insertion-method to generate a list of states that result from the insertion of an id at each step of the path"
 	(when (equalp path '(0)) (return-from gen-vehicle-states NIL))
 	(let ((cost (insertion-cost (car path) (cadr path) id)))
- 	; this last comparison is used to reduce number of generated states since it was a problem before
+ 	; NOTE this last comparison is used to reduce number of generated states since it was a problem before
 	(if (or (> (get-demand id) (get-remaining-capacity state vehicle)) (> cost (get-remaining-length state vehicle)) (> cost (/ *farthest-customer* 2)))
 		(gen-vehicle-states id vehicle (cdr path) state :index (1+ index)) ; then
 		(cons ; else
@@ -301,13 +304,21 @@
 	(dolist (id (get-unvisited-customer-ids state))
 		(dotimes (vehicle (usable-vehicles state))
 			(setf gstates (nconc gstates (gen-vehicle-states id vehicle (get-vehicle-route state vehicle) state)))))
-	;(print (length gstates))
 	gstates))
 
 (defun gen-successors-hybrid-approach (state)
+	"Generate successors states by adding each location to the current vehicle path in each possible position
+	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
 	(let ((gstates NIL) (cv (get-current-vehicle state)))
 	(dolist (id (get-unvisited-customer-ids state))
-	)))
+		(setf gstates (nconc gstates (gen-vehicle-states id cv (get-vehicle-route state cv) state))))
+	(when (and (null gstates) (not (equalp cv (vrp-vehicles.number *vrp-data*)))) ; current vehicle couldn't fit more locations and its not the last vehicle
+		(incf cv) (setf (state-current-vehicle state) cv) ; update cv on the state
+		(dolist (id (get-unvisited-customer-ids state))
+			(setf gstates (nconc gstates (gen-vehicle-states id cv (get-vehicle-route state cv) state)))))
+	(log-state state) ; PLACEHOLDER
+	(break )
+	gstates))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
@@ -319,7 +330,7 @@
 
 (defun generate-circle-slices (vn)
 	"Geretas list of vn simetric slices, in which vn is the number of vehicles"
-	(let ((v1 '(5 0)) (vlist nil) (angle 0) (increment (/ 360 vn)) (dpl (get-depot-location)))
+	(let ((v1 '(30 0)) (vlist nil) (angle 0) (increment (/ 360 vn)) (dpl (get-depot-location)))
 	(dotimes (i (1- vn))
 		(incf angle increment)
 		(let* ((rad_ang (/ (* angle pi) 180))
@@ -328,25 +339,35 @@
 		(setf vlist (nconc vlist (list (op-2d #'+ (list x y) dpl)))))) ; append and translate vector to correct coordinates
 	(cons (op-2d #'+ v1 dpl) vlist)))
 
-(defun get-arc-distance (point vector)
-	"Returns the size of the arc from point to vector"
+(defun get-angle (a b)
+	"Gets the angle at the depot between points a and b"
 	; this function uses the law of cosines ->   cos(x) = ( r^2 + R^2 - d^2 ) / ( 2rR )
 	;  where r and R are distance from (0,0) to a point, d is the distance between them and x is the angle at (0,0) between the 2 edges leading to both points
-	(let ((p-distance (distance (get-depot-location) point))
-		  (v-size (distance (get-depot-location) vector))
-		  (v-p-distance (distance point vector)))
-	(setf cos-x (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size)))
-	(* p-distance (acos cos-x))))
+	(let ((p-distance (distance (get-depot-location) a))
+		  (v-size (distance (get-depot-location) b))
+		  (v-p-distance (distance a b)))
+	(acos (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size)))))
+
+(defun get-arc-distance (point vector)
+	"Returns the size of the arc from point to vector"
+	(* (distance (get-depot-location) point) (get-angle point vector)))
 
 (defun heuristic (state)
 	(when (null (state-inserted-pair state)) (return-from heuristic 0))
-	(let ((slice-vector (aref *vector-slices* (car (state-inserted-pair state)))))
+	(let ((slice-vector (aref *equal-slice-sectors* (car (state-inserted-pair state)))))
 	(get-arc-distance (get-location (cadr (state-inserted-pair state))) slice-vector)))
 	; TODO add the average of traveled distance here to favor longer paths
 
 (defun alternative-heuristic (state)
 	0)
 
+
+
+
+
+
+; The cost is calculated by adding the distance to get to this state from the previous and the diference to the maximum demand (it should have lower costs for customers with high demand)
+; NOTE @AndreSobral since distance is more important i gave it a factor of 1.5 -- if this remains it must be tweaked
 (defun cost-function (state)
 	"This function gives the cost of a state"
 	0)
@@ -368,7 +389,7 @@
              profundidade-maxima espaco-em-arvore?)
 		(cond ((string-equal tipo-procura "a*.best.heuristic")
 				(a* (cria-problema (create-initial-state problema (list 0 0))
-										(list #'gen-successors-insertion-method)
+										(list #'gen-successors-hybrid-approach)
 										:objectivo? #'is-goal-state
 										:custo #'insertion-cost-function
 										:heuristica #'heuristic)
@@ -408,10 +429,10 @@
 ;; OTHER FUNCTIONS
 ;; -----------------------------
 
-(defun log-state (state)
+(defun log-state (state &key cluster-centers clusters)
 	"Log state to file to be made into a graph"
 	(with-open-file (str "out.txt"
 						:direction :output
 						:if-exists :supersede
 						:if-does-not-exist :create)
-		(format str "~S~%~%~S" *vrp-data* state)))
+		(format str "LOCATIONS~S~%~%ROUTES~S~%~%CCENTERS~S~%~%CLUSTERS~S" (vrp-customer.locations *vrp-data*) (state-vehicle-routes state) cluster-centers clusters)))

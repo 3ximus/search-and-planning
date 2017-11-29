@@ -1,6 +1,7 @@
 ;;; Run a few tests
 
 (load "vrp")
+(load "sweep")
 
 (setf *vrp-prob* (make-vrp  :name "CMT1"
 							:vehicle.capacity 160
@@ -57,8 +58,11 @@
 ;(trace gen-successors-insertion-method)
 ;(setf result (vrp *vrp-prob* "a*.best.heuristic"))
 
+;(write (sweep *vrp-prob*))
+
 (setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
-(write result)
+;(write result)
+
 
 ; ===================================
 ;(log-state result)
