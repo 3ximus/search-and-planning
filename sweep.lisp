@@ -46,20 +46,36 @@
 ; Retorna lista de pontos ordenada por angulos 
 (defun calculate_angles_to_depot (depot customers)
 	(let* ((angles NIL)
-		  (angle 0)
-		  (depot_location (rest depot))
-		  (customer_id 0)
-		  (customer_location NIL)
-		  (aux_point (list (+ (first depot_location) 10) (second depot_location))))
+		   (angle 0)
+		   (depot_location (rest depot))
+		   (customer_id 0)
+		   (customer_location NIL)
+		   (aux_point (list (+ (first depot_location) 10) (second depot_location))))
+
 
 		(dolist (customer customers angles)
 			(setf customer_location (rest customer))
 			(setf angle     		(get-angle-sweep aux_point customer_location depot_location))
 			(setf customer_id 		(1- (first customer)))
-			(setf angles (cons (list (first customer) angle) angles))
+			(setf angles (cons (list (first customer) angle (second customer) (third customer)) angles))
+
+			; debug
+			; (format T "~%customer location: ~D~%" customer_location)
+			; (format T "id: ~D~%" (first customer))
+			; (format T "angles: ~D~%" angles)
+			; (break)
 		)
 		
-		(sort angles #'< :key #'second)
+		; debug
+		; (format T "~%")
+		; (dolist (ang angles)
+		; 	(format T "id: ~D angle: ~D -> (~D, ~D)~%" (first ang) (second ang) (third ang) (fourth ang)))
+		; (format T "tamanho total: ~D~%" (length angles))
+		; (break)
+		
+		(setf angles (sort (copy-list angles) #'< :key #'second))
+
+		
 		
 		(mapcar #'first angles) ; apendas retorna id's
 	))
@@ -73,7 +89,24 @@
 	(let ((p-distance (distance depot_location a))
 		  (v-size (distance depot_location b))
 		  (v-p-distance (distance a b)))
-	(acos (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size)))))
+		   
+		   (adjust-angle (rtd (acos (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size))))
+		   				  depot_location
+		   				  b)
+	))
+	
+(defun adjust-angle (angle depot_location point)
+	(let ((point_y (second point))
+		  (depot_y (second depot_location))
+		  (my-angle angle)) 
+
+	(if (< point_y depot_y)
+		(setf my-angle (- 360 angle)))
+
+	my-angle))
+
+(defun rtd (a)
+	(/ (* a 180.0) pi))
 
 ; Verifica requisitos de distancia 
 (defun verify_distance_constraint (vehicle rem-distance distance_traveled customers depot customer_id)
