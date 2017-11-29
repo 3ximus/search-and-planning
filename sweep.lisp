@@ -19,6 +19,12 @@
 		  ;Valor de Retorno
 		  (clusters (create-list (vrp-vehicles.number vrp-prob) (list))))
 
+		(let ((dist (mapcar #'second demands)))
+		(format T "~%total customer demand: ~D~%" (apply #'+ dist))
+		(format T "total vehicle capacity: ~D~%" (* 160 5)))
+		;(format T "total vehicle capacity after cluster: ~D~%" (- (* 160 5) 3 12 22 13 10)))
+		(break)
+
 		(dolist (customer_id (calculate_angles_to_depot depot customers) clusters)
 
 			; Valores de capacidade e distancia para o novo customer id
@@ -30,16 +36,44 @@
 			; (format T "vehicle: ~D~%" vehicle)
 			; (format T "clusters: ~D~%" clusters)
 			; (format T "remaining capacity: ~D~%" rem-capacity)
+
 			; (break)
 
 			; Verifica Requisito de capacidade
-			(if	(verify_capacity_constraint vehicle rem-capacity demand_capacity)
-				(setf vehicle (next-vehicle rem-capacity vehicle-max-capacity)))
+			(if (= vehicle 0)
+				(if (verify_capacity_constraint vehicle rem-capacity demand_capacity)
+					(progn
+						(setf last-vehicle vehicle)
+						(incf vehicle)
+						(setf (nth vehicle rem-capacity) (- (nth vehicle rem-capacity) demand_capacity))
+						(setf (nth vehicle clusters) (cons customer_id (nth vehicle clusters)))
+					)
+					(progn
+						(setf (nth vehicle rem-capacity) (- (nth vehicle rem-capacity) demand_capacity))
+						(setf (nth vehicle clusters) (cons customer_id (nth vehicle clusters))) ;Adiciona veiculo a um cluster
+					))
 
-				
-			(setf (nth vehicle rem-capacity) (- (nth vehicle rem-capacity) demand_capacity))
-			(setf (nth vehicle clusters) (cons customer_id (nth vehicle clusters))) ;Adiciona veiculo a um cluster
-		) 
+			(if (not (verify_capacity_constraint last-vehicle rem-capacity demand_capacity))
+				(progn
+					(setf (nth last-vehicle rem-capacity) (- (nth last-vehicle rem-capacity) demand_capacity))
+					(setf (nth last-vehicle clusters) (cons customer_id (nth last-vehicle clusters))) ;Adiciona veiculo a um cluster antigo
+				)
+				(if (verify_capacity_constraint vehicle rem-capacity demand_capacity)
+					(progn
+						(setf last-vehicle vehicle)
+						(incf vehicle)
+						(setf (nth vehicle rem-capacity) (- (nth vehicle rem-capacity) demand_capacity))
+						(setf (nth vehicle clusters) (cons customer_id (nth vehicle clusters)))
+					)
+					(progn
+						(setf (nth vehicle rem-capacity) (- (nth vehicle rem-capacity) demand_capacity))
+						(setf (nth vehicle clusters) (cons customer_id (nth vehicle clusters))) ;Adiciona veiculo a um cluster
+					)))
+			)
+		)
+
+		(format T "alocated points: ~D~%" (apply #'+ (mapcar #'length clusters)))
+		clusters
 
 	))
 
@@ -66,14 +100,14 @@
 			; (break)
 		)
 		
-		; debug
-		; (format T "~%")
-		; (dolist (ang angles)
-		; 	(format T "id: ~D angle: ~D -> (~D, ~D)~%" (first ang) (second ang) (third ang) (fourth ang)))
-		; (format T "tamanho total: ~D~%" (length angles))
-		; (break)
-		
 		(setf angles (sort (copy-list angles) #'< :key #'second))
+
+		; debug
+		(format T "~%")
+		(dolist (ang angles)
+			(format T "id: ~D angle: ~D -> (~D, ~D)~%" (first ang) (second ang) (third ang) (fourth ang)))
+		(format T "tamanho total: ~D~%" (length angles))
+		(break)
 
 		
 		
@@ -100,7 +134,7 @@
 		  (depot_y (second depot_location))
 		  (my-angle angle)) 
 
-	(if (< point_y depot_y)
+	(if (< point_y (* 1 depot_y))
 		(setf my-angle (- 360 angle)))
 
 	my-angle))
