@@ -314,7 +314,7 @@
 		(dolist (id (get-unvisited-customer-ids state))
 			(setf gstates (nconc gstates (gen-vehicle-states id cv (get-vehicle-route state cv) state)))))
 	(log-state state) ; PLACEHOLDER
-	;(break )
+	(break )
 	gstates))
 
 (defun is-goal-state (state)
@@ -340,14 +340,14 @@
 	"Gets the angle at the depot between points a and b"
 	; this function uses the law of cosines ->   cos(x) = ( r^2 + R^2 - d^2 ) / ( 2rR )
 	;  where r and R are distance from (0,0) to a point, d is the distance between them and x is the angle at (0,0) between the 2 edges leading to both points
-	(let ((p-distance (distance (get-depot-location) point))
-		  (v-size (distance (get-depot-location) vector))
-		  (v-p-distance (distance point vector)))
+	(let ((p-distance (distance (get-depot-location) a))
+		  (v-size (distance (get-depot-location) b))
+		  (v-p-distance (distance a b)))
 	(acos (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size)))))
 
 (defun get-arc-distance (point vector)
 	"Returns the size of the arc from point to vector"
-	(* (distance (get-depot-location) point) (get-angle point vector))
+	(* (distance (get-depot-location) point) (get-angle point vector)))
 
 (defun heuristic (state)
 	(when (null (state-inserted-pair state)) (return-from heuristic 0))
@@ -419,10 +419,10 @@
 ;; OTHER FUNCTIONS
 ;; -----------------------------
 
-(defun log-state (state)
+(defun log-state (state &optional (clusters *vector-slices*))
 	"Log state to file to be made into a graph"
 	(with-open-file (str "out.txt"
 						:direction :output
 						:if-exists :supersede
 						:if-does-not-exist :create)
-		(format str "~S~%~%~S" *vrp-data* state)))
+		(format str "~S~%~%~S~%~%CLUSTERS~S" *vrp-data* state clusters)))
