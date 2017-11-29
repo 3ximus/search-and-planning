@@ -7,11 +7,11 @@
 
 		  ; Constantes Veiculo
 		  (vehicle-max-capacity (vrp-vehicle.capacity vrp-prob))
-		  
+
 		  ; Variaveis
 		  (demand NIL)
 		  (demand_capacity 0)
-		  
+
 		  ;Varivaveis referentes ao veiculo
 		  (vehicle  0)
 		  (rem-capacity (create-list (vrp-vehicles.number vrp-prob) vehicle-max-capacity))
@@ -23,7 +23,7 @@
 		(format T "~%total customer demand: ~D~%" (apply #'+ dist))
 		(format T "total vehicle capacity: ~D~%" (* 160 5)))
 		;(format T "total vehicle capacity after cluster: ~D~%" (- (* 160 5) 3 12 22 13 10)))
-		(break)
+		;(break)
 
 		(dolist (customer_id (calculate_angles_to_depot depot customers) clusters)
 
@@ -77,7 +77,7 @@
 
 	))
 
-; Retorna lista de pontos ordenada por angulos 
+; Retorna lista de pontos ordenada por angulos
 (defun calculate_angles_to_depot (depot customers)
 	(let* ((angles NIL)
 		   (angle 0)
@@ -99,7 +99,7 @@
 			; (format T "angles: ~D~%" angles)
 			; (break)
 		)
-		
+
 		(setf angles (sort (copy-list angles) #'< :key #'second))
 
 		; debug
@@ -107,10 +107,10 @@
 		(dolist (ang angles)
 			(format T "id: ~D angle: ~D -> (~D, ~D)~%" (first ang) (second ang) (third ang) (fourth ang)))
 		(format T "tamanho total: ~D~%" (length angles))
-		(break)
+		;(break)
 
-		
-		
+
+
 		(mapcar #'first angles) ; apendas retorna id's
 	))
 
@@ -123,16 +123,16 @@
 	(let ((p-distance (distance depot_location a))
 		  (v-size (distance depot_location b))
 		  (v-p-distance (distance a b)))
-		   
+
 		   (adjust-angle (rtd (acos (/ (- (+ (* p-distance p-distance) (* v-size v-size)) (* v-p-distance v-p-distance)) (* 2 p-distance v-size))))
 		   				  depot_location
 		   				  b)
 	))
-	
+
 (defun adjust-angle (angle depot_location point)
 	(let ((point_y (second point))
 		  (depot_y (second depot_location))
-		  (my-angle angle)) 
+		  (my-angle angle))
 
 	(if (< point_y (* 1 depot_y))
 		(setf my-angle (- 360 angle)))
@@ -142,7 +142,7 @@
 (defun rtd (a)
 	(/ (* a 180.0) pi))
 
-; Verifica requisitos de distancia 
+; Verifica requisitos de distancia
 (defun verify_distance_constraint (vehicle rem-distance distance_traveled customers depot customer_id)
 	(let ((depot_location 	  (rest depot)
 		  (customer_location (rest (nth (1- customer_id) customers))))
@@ -166,7 +166,7 @@
 		(second demand)))
 
 ; Escolhe o proximo veiculo com base na remaining distance e capacity
-(defun next-vehicle (rem-capacity vehicle-capacity) 
+(defun next-vehicle (rem-capacity vehicle-capacity)
 	(let ((vehicle 0)
 		  (return_counter 0)
 		  (max_capacity 0))

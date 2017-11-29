@@ -36,8 +36,8 @@
 
 (defun is-inside-sector (vehicle id)
 	"Each vehicle has its own sector therefore this returns if id belongs to that sector"
-	(let ((sector-start (op-2d #'- (aref *vector-slices* vehicle) (get-depot-location)))
-			(sector-end (op-2d #'- (aref *vector-slices* (mod (1+ vehicle) (vrp-vehicles.number *vrp-data*))) (get-depot-location)))
+	(let ((sector-start (op-2d #'- (aref *equal-slice-sectors* vehicle) (get-depot-location)))
+			(sector-end (op-2d #'- (aref *equal-slice-sectors* (mod (1+ vehicle) (vrp-vehicles.number *vrp-data*))) (get-depot-location)))
 			(customer-location (op-2d #'- (get-location id) (get-depot-location))))
 		(and (are-clockwise sector-end customer-location) (not (are-clockwise sector-start customer-location)))))
 
@@ -58,7 +58,8 @@
 (defun do-slice-insertion (state id)
 	"Insert id in the corresponding vehicle acording to slice vectors slice"
 	(dotimes (i (vrp-vehicles.number *vrp-data*))
-		(when (is-inside-sector i id)
+		;(when (is-inside-sector i id) ; NOTE used in equal-slice-sectors
+		(when (find id (aref *sweep-sectors* i))
 			(multiple-value-bind (cost index) (assess-path-insertions id (get-vehicle-route state i) (get-remaining-length state i) (get-remaining-capacity state i))
 				(print cost)
 				(when (< (get-remaining-length state i) cost) (return ))
