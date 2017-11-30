@@ -74,7 +74,7 @@
 	"get the first solution for the simulated annealing problem"
 	(dolist (cid (get-unvisited-customer-ids zero-state))
 		(do-slice-insertion zero-state cid)
-		(log-state zero-state)
+		(log-state zero-state :clusters *sweep-sectors*)
 		(break ) ; PLACEHOLDER TESTING
 		))
 

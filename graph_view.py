@@ -76,16 +76,6 @@ for i in clusters:
 	cluster_trace['x'].append(i[0])
 	cluster_trace['y'].append(i[1])
 
-area_trace = Scatter(
-	x=[], y=[], mode='lines', name='Cluster Areas', fill='tonext',
-	line=Line(width=1, color='#b2b2b2'))
-
-for i in clusters:
-	area_trace['x'].append(i[0])
-	area_trace['y'].append(i[1])
-	area_trace['x'].append(data_points[0][0])
-	area_trace['y'].append(data_points[0][1])
-
 edges = []
 for i, path in enumerate(paths):
 	edges.append(Scatter( x=[], y=[], name='Vehicle %d' % i, text=[],
@@ -98,13 +88,39 @@ for i, path in enumerate(paths):
 		edges[i]['y'].append(y)
 		edges[i]['text'].append("%d  [ %.1f %.1f ]" % (path[l], data_points[path[l]][0], data_points[path[l]][1]))
 
-updatemenus = list([
-	dict( buttons = list([
-		dict(label="Off", method='restyle', args=['mode',['markers', 'markers']+['lines+markers']*len(edges)]),
-		dict(label="On", method='restyle', args=['mode',['markers+text', 'markers']+['lines+markers']*len(edges)]),
-	]))])
+cluster_scatter = []
+for i, path in enumerate(cluster_areas):
+	cluster_scatter.append(Scatter( x=[], y=[], name='Cluster %d' % i,
+		marker=Marker(size=10, symbol='square'),
+		mode='markers', visible=False))
+	for l in range(len(path)):
+		x , y = data_points[path[l]]
+		cluster_scatter[i]['x'].append(x)
+		cluster_scatter[i]['y'].append(y)
 
-fig = Figure(data=Data([area_trace] + edges + [node_trace, cluster_trace]),
-			 layout=Layout( title='Search Graph', hovermode='closest', updatemenus=updatemenus))
+updatemenus = list([
+	dict(buttons = list([
+		dict(label="Off", method='restyle', args=['mode',['lines+markers']*len(edges) + ['markers', 'markers'] + ['markers']*len(cluster_scatter)]),
+		dict(label="On", method='restyle', args=['mode',['lines+markers']*len(edges) + ['markers+text', 'markers'] + ['markers']*len(cluster_scatter)]),
+	]), direction='left', pad = {'r': 10, 't': 10},
+        showactive = True, type = 'buttons', x = 0.05,
+        xanchor = 'left', y = 1.05, yanchor = 'bottom'
+	),
+	dict(buttons = list([
+		dict(label="Hide", method='restyle', args=['visible',[True]*len(edges) + [True, True] + [False]*len(cluster_scatter)]),
+		dict(label="Show", method='restyle', args=['visible',[True]*len(edges) + [True, True] + [True]*len(cluster_scatter)]),
+	]), direction='left', pad = {'r': 10, 't': 10},
+        showactive = True, type = 'buttons', x = 0.2,
+        xanchor = 'left', y = 1.05, yanchor = 'bottom'
+	),
+	])
+
+annotations = list([
+    dict(text='Labels', x=0, y=1.085, yref='paper', align='left', showarrow=False),
+    dict(text='Clusters', x=10, y=1.085, yref='paper', align='left', showarrow=False),
+])
+
+fig = Figure(data=Data(edges + [node_trace, cluster_trace] + cluster_scatter),
+			 layout=Layout( title='Search Graph', hovermode='closest', updatemenus=updatemenus, annotations=annotations))
 plotly.offline.plot(fig, filename='search_graph.html', auto_open=False)
 
