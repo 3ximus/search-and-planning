@@ -67,7 +67,7 @@
 ; (break)
 
 
-(gen-successors-with-clustering (create-initial-state *vrp-prob*))
+(gen-successors-with-clustering (create-initial-state *vrp-prob* (list 0 0)))
 
 ; (trace Mole-Jameson-Seq-Insert-Heuristic)
 ; (setf result (vrp *vrp-prob* "a*.best.alternative.heuristic"))

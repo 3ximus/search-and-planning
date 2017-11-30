@@ -315,36 +315,59 @@
 	
 	(let* ((cv 				  (get-current-vehicle state))
 		   (vehicle-cluster    (aref *sweep-sectors* cv))
-		   (inserted-locations (butlast (rest (aref (state-vehicle-routes state) cv))))
-		   (locations-to-insert NIL))
+		   (inserted-customers (butlast (rest (aref (state-vehicle-routes state) cv))))
+		   (customers-to-insert NIL))
 
-	(if (= (length vehicle-cluster) (length inserted-locations)) ;; ja inserio todas as posicoes para aquele veiculo
+	(if (= (length vehicle-cluster) (length inserted-customers)) ;; ja inserio todas as posicoes para aquele veiculo
 		(progn
 			(setf (state-current-vehicle state) (1+ (state-current-vehicle state)));; update do current vehicle
 			(setf cv (get-current-vehicle state))
 			(setf vehicle-cluster 	 (vehicle-cluster (aref *sweep-sectors* cv)))
-			(setf inserted-locations (inserted-locations (butlast (rest (aref (state-vehicle-routes state) cv)))))
+			(setf inserted-customers (inserted-customers (butlast (rest (aref (state-vehicle-routes state) cv)))))
 		)
 	)
 
 	(format T "~%vehicle: ~D~%" cv)
 	(format T "vehicle-cluster: ~D~%" vehicle-cluster)
-	(format T "inserted-locations: ~D~%" inserted-locations)
+	(format T "inserted-customers: ~D~%" inserted-customers)
 	(break)
 
-	(if (null inserted-locations) ;; no locations have been inserted
-		(setf locations-to-insert vehicle-cluster)
-		(dotimes (i (length inserted-locations))
-			(setf locations-to-insert (remove (nth i inserted-locations) vehicle-cluster))))
+	(if (null inserted-customers) ;; no locations have been inserted
+		(setf customers-to-insert vehicle-cluster)
+		(dotimes (i (length inserted-customers))
+			(setf customers-to-insert (remove (nth i customers-locations) vehicle-cluster))))
 
-	(format T "locations-to-insert: ~D~%" locations-to-insert)
+	(format T "customers-to-insert: ~D~%" customers-to-insert)
 	(break)
 
-	(locations-to-states state locations-to-insert))
-)
+	(customers-to-states state customers-to-insert)))
 
-(defun locations-to-states (state locations-to-insert)
-	0) ; TODO
+
+(defun customers-to-states (state customers-to-insert)
+	(let* ((generated-states NIL)
+		   (cv (get-current-vehicle state))
+		   (cv-location (get-location (car (get-vehicle-route state cv))))) ; TODO: get location of last inserted customer (see state-insertion pair)
+
+	(dolist (customer-id customers-to-insert generated-states)
+		(let* ((customer-location (get-location customer-id))
+			   (rem-tour-len (- (get-remaining-length state cv)   (distance cv-location customer-location)))
+			   (rem-capacity (- (get-remaining-capacity state cv) (get-demand customer-id))))
+			(if (and (>= rem-tour-len (distance customer-location (get-depot-location))) (>= rem-capacity 0))
+				(progn
+				
+				(setf generated-states
+					(cons (make-state :vehicle-routes 			  (change-array-copy (state-vehicle-routes state) cv (cons customer-id (get-vehicle-route state cv))) ;; TODO: Insercao
+									  :current-vehicle 			  (state-current-vehicle state)
+									  :inserted-pair 			  (list cv customer-id) ;; TODO: adicionar index
+									  :unvisited-locations 		  (remove-location state customer-id)
+									  :number-unvisited-locations (1- (state-number-unvisited-locations state))
+									  :remaining-tour-length 	  (change-array-copy (state-remaining-tour-length state) cv rem-tour-len)
+									  :remaining-capacity 	 	  (change-array-copy (state-remaining-capacity state)    cv rem-capacity))
+						  generated-states))
+				(format T "~%generated-states ~D~%" generated-states)
+				(break)
+				))))
+	))
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
