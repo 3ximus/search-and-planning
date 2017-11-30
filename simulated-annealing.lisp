@@ -77,9 +77,10 @@
 			(p2 (get-vehicle-route state v2)))
 		(setf tmp (nth i1 p1))
 		(multiple-value-bind (cost index) (assess-path-insertions tmp p2 (get-remaining-length state v2) (get-remaining-capacity state v2))
-			(when (< (get-remaining-length state v2) cost) (return-from shift nil))
+			(when (< (get-remaining-length state v2) cost) (return-from shift NIL))
 			(insert-customer-on-path state tmp v2 index cost)
-			(delete-position i1 p1))))
+			(delete-position i1 p1))
+	T))
 
 (defun interchange (state v1 i1 v2 i2)
 	"Interchange 2 positions (i1 i2) in 2 vehicle (v1 v2) paths,
@@ -93,22 +94,34 @@
 				(added-length-v2 (- (insertion-cost p2a p2b ni1) (insertion-cost p2a p2b ni2)))
 				(added-capacity-v1 (- (get-demand ni2) (get-demand ni1)))
 				(added-capacity-v2 (- (get-demand ni1) (get-demand ni2))))
-		(break )
 		(when (or (> added-capacity-v1 (get-remaining-capacity state v1)) (> added-capacity-v2 (get-remaining-capacity state v2))
 				  (> added-length-v1 (get-remaining-length state v1)) (> added-length-v2 (get-remaining-length state v2)))
-			(return-from interchange nil)) ; then
+			(return-from interchange NIL)) ; then
 		(setf (nth i1 p1) (nth i2 p2))
 		(setf (nth i2 p2) ni1)
 		(set-remaining-capacity state (- (get-remaining-capacity state v1) added-capacity-v1) v1)
 		(set-remaining-capacity state (- (get-remaining-capacity state v2) added-capacity-v2) v2)
 		(set-remaining-length state (- (get-remaining-length state v1) added-length-v1) v1)
-		(set-remaining-length state (- (get-remaining-length state v2) added-length-v2) v2)))))
+		(set-remaining-length state (- (get-remaining-length state v2) added-length-v2) v2)))
+	T))
 
 (defun shift-process ())
 
-(defun interchange-process (state)
+(defun interchange-process (state vehicle)
 	"Returns all neighbors by means of interchange with other adjacent vehicle paths, exchanging a costumer in the route with another from other route"
-	)
+	(let ((path (get-vehicle-route state vehicle)) (states NIL)
+			(vb (mod (1- vehicle) (vrp-vehicles.number *vrp-data*))) ; vehicle after
+			(va (mod (1+ vehicle) (vrp-vehicles.number *vrp-data*)))) ; vehicle before
+	(loop for k from 1 to (- (length path) 2) do
+		(loop for i from 1 to (- (length (get-vehicle-route state vb)) 2) do
+			(let ((new-state (copy-full-state state)))
+				(when (interchange new-state vb i vehicle k)
+					(setf states (cons new-state states)))))
+		(loop for j from 1 to (- (length (get-vehicle-route state va)) 2) do
+			(let ((new-state (copy-full-state state)))
+				(when (interchange new-state va j vehicle k)
+					(setf states (cons new-state states))))))
+	states))
 
 (defun closest-interchange-process (state)
 	"Returns all neighbors by means of interchange with any other vehicle route that has points adjacent to a given vehicle"
@@ -116,13 +129,10 @@
 
 (defun neighbor-states (state)
 	"Get all neighbor states"
-	(let ((nstates nil)))
+	(let ((nstates NIL))
 	(dotimes (i (vrp-vehicles.number *vrp-data*))
-	)
-
-	(log-state state)
-	(break )
-	nil)
+		(setf nstates (nconc nstates (interchange-process state i))))
+	nstates))
 
 ;; -----------------------------
 ;; VALUE OF A STATE
@@ -164,9 +174,13 @@
 				  (next (get-random-element successors))
 				  (delta-worse (- (funcall (problem-state-value problem) current) (funcall (problem-state-value problem) next))))
 				(if (equalp temp 0)
-					(return current))
+					(return-from simulated-annealing current))
 				(if (> delta-worse 0)
 					(setf current next)
 					(if (check-probability delta-worse temp)
-						(setf current next)))))
+						(setf current next)))
+				(print temp)
+				(log-state current)
+				(sleep 0.3)
+				))
 	current))
