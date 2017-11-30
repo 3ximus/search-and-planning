@@ -182,7 +182,7 @@
 	(set-remaining-capacity state (- (get-remaining-capacity state vehicle) (get-demand id)) vehicle)
 	(set-remaining-length state (- (get-remaining-length state vehicle) added-length) vehicle)
 	(setf (state-transition-cost state) added-length)
-	(setf (state-inserted-pair state) (list vehicle id))
+	(setf (state-inserted-pair state) (list vehicle id index))
 	(setf (state-unvisited-locations state) (remove-location state id))
 	(setf (state-number-unvisited-locations state) (1- (state-number-unvisited-locations state)))))
 
@@ -292,7 +292,6 @@
 	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
 	(log-state state) ; PLACEHOLDER
 	(print *nos-expandidos*)
-	;(break )
 	(let ((gstates NIL))
 	(dolist (id (get-unvisited-customer-ids state))
 		(dotimes (vehicle (usable-vehicles state))
@@ -310,8 +309,39 @@
 		(dolist (id (get-unvisited-customer-ids state))
 			(setf gstates (nconc gstates (gen-vehicle-states id cv (get-vehicle-route state cv) state)))))
 	(log-state state) ; PLACEHOLDER
-	(break )
 	gstates))
+
+(defun gen-successors-with-clustering (state)
+	
+	(let ((cv 				  (get-current-vehicle state))
+		  (vehicle-cluster    (aref *sweep-sectors* cv))
+		  (inserted-locations (butlast (rest (aref (state-vehicle-routes state) cv))))
+		  (locations-to-insert NIL))
+
+	(if (= (length vehicle-cluster) (length inserted-locations)) ;; ja inserio todas as posicoes para aquele veiculo
+		(progn
+			(setf (state-current-vehicle state) (1+ (state-current-vehicle state)));; update do current vehicle
+			(setf cv (get-current-vehicle state))
+			(setf vehicle-cluster 	 (vehicle-cluster (aref *sweep-sectors* cv)))
+			(setf inserted-locations (inserted-locations (butlast (rest (aref (state-vehicle-routes state) cv)))))
+		)
+	)
+
+	(format T "~%vehicle: ~D~%" cv)
+	(format T "vehicle-cluster: ~D~%" vehicle-cluster)
+	(format T "inserted-locations: ~D~%" inserted-locations)
+	(break)
+
+	(if (null inserted-locations) ;; no locations have been inserted
+		(setf locations-to-insert vehicle-cluster)
+		(dotimes (i (length inserted-locations))
+			(setf locations-to-insert (remove (nth i inserted-locations) vehicle-cluster))))
+
+	(locations-to-states state locations-to-insert))
+)
+
+(defun locations-to-states (state locations-to-insert)
+	0) ; TODO
 
 (defun is-goal-state (state)
 	"Checks if a given state is the goal state"
@@ -352,12 +382,17 @@
 	; TODO add the average of traveled distance here to favor longer paths
 
 (defun alternative-heuristic (state)
-	0)
+	(Mole-Jameson-Seq-Insert-Heuristic state))
 
-
-
-
-
+(defun Mole-Jameson-Seq-Insert-Heuristic (state)
+	(when (null (state-inserted-pair state)) (return-from Mole-Jameson-Seq-Insert-Heuristic 0))
+	(let* ((index (third (state-inserted-pair state)))
+		   (route (get-vehicle-route state (first (state-inserted-pair state))))
+		   (i     (get-location (nth (1- index) route)))
+		   (k     (get-location (second (state-inserted-pair state)))) 
+		   (j     (get-location (nth (1+ index) route)))
+		   (lamb 1))
+	(- (+ (distance i k) (distance k j)) (* lamb (distance i j)))))
 
 ; The cost is calculated by adding the distance to get to this state from the previous and the diference to the maximum demand (it should have lower costs for customers with high demand)
 ; NOTE @AndreSobral since distance is more important i gave it a factor of 1.5 -- if this remains it must be tweaked
@@ -388,11 +423,11 @@
 										:heuristica #'heuristic)
 					:espaco-em-arvore? espaco-em-arvore?))
 			((string-equal tipo-procura "a*.best.alternative.heuristic")
-				(a* (cria-problema (create-initial-state problema)
-										(list #'gen-successors)
+				(a* (cria-problema (create-initial-state problema (list 0 0))
+										(list #'gen-successors-hybrid-approach)
 										:objectivo? #'is-goal-state
-										:custo #'cost-function
-										:heuristica #'alternative-heuristic)
+										:custo #'insertion-cost-function
+										:heuristica #'Mole-Jameson-Seq-Insert-Heuristic)
 					:espaco-em-arvore? espaco-em-arvore?))
 			((string-equal tipo-procura "iterative.sampling")
 				(iterative-sampling

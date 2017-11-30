@@ -60,7 +60,15 @@
 
 ;(write (sweep *vrp-prob*))
 
-(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
+;(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
+
+
+; (write (Mole-Jameson-Seq-Insert-Heuristic (create-initial-state *vrp-prob*)))
+; (break)
+
+
+; (trace Mole-Jameson-Seq-Insert-Heuristic)
+(setf result (vrp *vrp-prob* "a*.best.alternative.heuristic"))
 (write result)
 
 ; ===================================
