@@ -67,11 +67,25 @@
 ; (break)
 
 
-(gen-successors-with-clustering (create-initial-state *vrp-prob* (list 0 0)))
+; (defvar *new-state*)
+
+; (setf new-state (first (gen-successors-with-clustering (create-initial-state *vrp-prob* (list 0 0)))))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
+; (setf new-state (first (gen-successors-with-clustering new-state)))
 
 ; (trace Mole-Jameson-Seq-Insert-Heuristic)
-; (setf result (vrp *vrp-prob* "a*.best.alternative.heuristic"))
-; (write result)
+(defvar result)
+(write (vrp *vrp-prob* "a*.best.alternative.heuristic"))
+
+; (write (state-vehicle-routes (car (last (first result)))))
+
 
 ; ===================================
 ;(log-state result)

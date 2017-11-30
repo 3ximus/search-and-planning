@@ -313,52 +313,58 @@
 
 (defun gen-successors-with-clustering (state)
 
-	(let* ((cv 				  (get-current-vehicle state))
+	(let* ((cv 				   (get-current-vehicle state))
 		   (vehicle-cluster    (aref *sweep-sectors* cv))
 		   (inserted-customers (butlast (rest (aref (state-vehicle-routes state) cv))))
 		   (customers-to-insert NIL))
+		   ;(control 1))
 
 	(if (= (length vehicle-cluster) (length inserted-customers)) ;; ja inserio todas as posicoes para aquele veiculo
 		(progn
 			(setf (state-current-vehicle state) (1+ (state-current-vehicle state)));; update do current vehicle
 			(setf cv (get-current-vehicle state))
-			(setf vehicle-cluster 	 (vehicle-cluster (aref *sweep-sectors* cv)))
-			(setf inserted-customers (inserted-customers (butlast (rest (aref (state-vehicle-routes state) cv)))))
+			(setf vehicle-cluster 	 (aref *sweep-sectors* cv))
+			(setf inserted-customers (butlast (rest (aref (state-vehicle-routes state) cv))))
+			;(setf control 0)
 		)
 	)
 
-	(format T "~%vehicle: ~D~%" cv)
-	(format T "vehicle-cluster: ~D~%" vehicle-cluster)
-	(format T "inserted-customers: ~D~%" inserted-customers)
-	(break)
-
 	(if (null inserted-customers) ;; no locations have been inserted
 		(setf customers-to-insert vehicle-cluster)
-		(dotimes (i (length inserted-customers))
-			(setf customers-to-insert (remove (nth i customers-locations) vehicle-cluster))))
+		(progn
+			(setf customers-to-insert vehicle-cluster)
+			(dotimes (i (length inserted-customers))
+				(setf customers-to-insert (remove (nth i inserted-customers) customers-to-insert)))
+		))
 
-	(format T "customers-to-insert: ~D~%" customers-to-insert)
-	(break)
+	; (when (= control 0)
+	; 	(format T "~%state: ~D~%" state)
+	; 	(format T "vehicle: ~D~%" cv)
+	; 	(format T "vehicle-cluster: ~D length: ~D~%"  vehicle-cluster (length vehicle-cluster))
+	; 	(format T "inserted-customers: ~D~%" inserted-customers)
+	; 	(format T "customers-to-insert: ~D length: ~D~%" customers-to-insert (length customers-to-insert))
+	; 	(setf control 1)
+	; 	(break))
 
 	(customers-to-states state customers-to-insert)))
 
 
 (defun customers-to-states (state customers-to-insert)
-	(let* ((generated-states NIL)
-		   (cv (get-current-vehicle state)))
+	(let ((generated-states NIL)
+		  (cv (get-current-vehicle state)))
+	
 	(dolist (customer-id customers-to-insert generated-states)
 		(let* ((customer-location (get-location customer-id))
 			   (added-length (insertion-cost 0 (nth (- (length (get-vehicle-route state cv)) 2) (get-vehicle-route state cv)) customer-id))
 			   (rem-capacity (- (get-remaining-capacity state cv) (get-demand customer-id))))
+
 			(when (and (< added-length (get-remaining-length state cv)) (>= rem-capacity 0))
 				(setf generated-states
 					(cons (let ((new-state (copy-full-state state)))
-								(insert-customer-on-path state customer-id cv (- (length (get-vehicle-route state cv)) 2) added-length)
+								(insert-customer-on-path new-state customer-id cv (- (length (get-vehicle-route state cv)) 1) added-length)
 						  new-state)
-					generated-states))
-				(format T "~%generated-states ~D~%" generated-states)
-				(break)
-				)))
+					generated-states))	
+			)))
 	))
 
 (defun is-goal-state (state)
@@ -400,7 +406,7 @@
 	; TODO add the average of traveled distance here to favor longer paths
 
 (defun alternative-heuristic (state)
-	(Mole-Jameson-Seq-Insert-Heuristic state))
+	(reduce #'+ (state-remaining-tour-length state)))
 
 (defun Mole-Jameson-Seq-Insert-Heuristic (state)
 	(when (null (state-inserted-pair state)) (return-from Mole-Jameson-Seq-Insert-Heuristic 0))
@@ -440,10 +446,10 @@
 					:espaco-em-arvore? espaco-em-arvore?))
 			((string-equal tipo-procura "a*.best.alternative.heuristic")
 				(a* (cria-problema (create-initial-state problema (list 0 0))
-										(list #'gen-successors-hybrid-approach)
+										(list #'gen-successors-with-clustering)
 										:objectivo? #'is-goal-state
 										:custo #'insertion-cost-function
-										:heuristica #'Mole-Jameson-Seq-Insert-Heuristic)
+										:heuristica #'alternative-heuristic)
 					:espaco-em-arvore? espaco-em-arvore?))
 			((string-equal tipo-procura "iterative.sampling")
 				(iterative-sampling
@@ -458,20 +464,24 @@
 						:state-value #'state-value)))
 		((string-equal tipo-procura "best.approach")
 			(best-approach (create-initial-state problema))))))  ; TODO
+
 (let ((*nos-gerados* 0)
-	(*nos-expandidos* 0)
-	(tempo-inicio (get-internal-run-time )))
+	  (*nos-expandidos* 0)
+	  (tempo-inicio (get-internal-run-time )))
 	(let ((solucao (faz-a-procura problema tipo-procura
-				profundidade-maxima
-				espaco-em-arvore?)))
+								  profundidade-maxima
+								 espaco-em-arvore?)))
 (list solucao
-			(- (get-internal-run-time ) tempo-inicio)
+		(- (get-internal-run-time ) tempo-inicio)
 			*nos-expandidos*
 			*nos-gerados*)))))
 
 ;; -----------------------------
 ;; OTHER FUNCTIONS
 ;; -----------------------------
+
+(defun print-a*-result (result)
+	(write (state-vehicle-routes (car (last result)))))
 
 (defun log-state (state &key cluster-centers clusters)
 	"Log state to file to be made into a graph"
