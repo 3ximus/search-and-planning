@@ -55,13 +55,12 @@
 			; decide if we return the cost gathered by recursion or the current one
 			(if (< cost rest-cost) (values cost index) (values rest-cost rest-index)))))
 
-(defun do-slice-insertion (state id)
+(defun do-sector-insertion (state id)
 	"Insert id in the corresponding vehicle acording to slice vectors slice"
 	(dotimes (i (vrp-vehicles.number *vrp-data*))
 		;(when (is-inside-sector i id) ; NOTE used in equal-slice-sectors
 		(when (find id (aref *sweep-sectors* i))
 			(multiple-value-bind (cost index) (assess-path-insertions id (get-vehicle-route state i) (get-remaining-length state i) (get-remaining-capacity state i))
-				(print cost)
 				(when (< (get-remaining-length state i) cost) (return ))
 				(insert-customer-on-path state id i index cost)
 				(return )))))
@@ -73,13 +72,13 @@
 (defun initial-solution (zero-state)
 	"get the first solution for the simulated annealing problem"
 	(dolist (cid (get-unvisited-customer-ids zero-state))
-		(do-slice-insertion zero-state cid)
-		(log-state zero-state :clusters *sweep-sectors*)
-		(break ) ; PLACEHOLDER TESTING
-		))
+		(do-sector-insertion zero-state cid))
+	(return-from initial-solution zero-state))
 
 (defun neighbor-states (state)
 	"Get all neighbor states"
+	(log-state state)
+	(break )
 	nil)
 
 ;; -----------------------------
