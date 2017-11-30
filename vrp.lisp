@@ -312,7 +312,7 @@
 	gstates))
 
 (defun gen-successors-with-clustering (state)
-	
+
 	(let* ((cv 				  (get-current-vehicle state))
 		   (vehicle-cluster    (aref *sweep-sectors* cv))
 		   (inserted-customers (butlast (rest (aref (state-vehicle-routes state) cv))))
@@ -345,28 +345,20 @@
 
 (defun customers-to-states (state customers-to-insert)
 	(let* ((generated-states NIL)
-		   (cv (get-current-vehicle state))
-		   (cv-location (get-location (car (get-vehicle-route state cv))))) ; TODO: get location of last inserted customer (see state-insertion pair)
-
+		   (cv (get-current-vehicle state)))
 	(dolist (customer-id customers-to-insert generated-states)
 		(let* ((customer-location (get-location customer-id))
-			   (rem-tour-len (- (get-remaining-length state cv)   (distance cv-location customer-location)))
+			   (added-length (insertion-cost 0 (nth (- (length (get-vehicle-route state cv)) 2) (get-vehicle-route state cv)) customer-id))
 			   (rem-capacity (- (get-remaining-capacity state cv) (get-demand customer-id))))
-			(if (and (>= rem-tour-len (distance customer-location (get-depot-location))) (>= rem-capacity 0))
-				(progn
-				
+			(when (and (< added-length (get-remaining-length state cv)) (>= rem-capacity 0))
 				(setf generated-states
-					(cons (make-state :vehicle-routes 			  (change-array-copy (state-vehicle-routes state) cv (cons customer-id (get-vehicle-route state cv))) ;; TODO: Insercao
-									  :current-vehicle 			  (state-current-vehicle state)
-									  :inserted-pair 			  (list cv customer-id) ;; TODO: adicionar index
-									  :unvisited-locations 		  (remove-location state customer-id)
-									  :number-unvisited-locations (1- (state-number-unvisited-locations state))
-									  :remaining-tour-length 	  (change-array-copy (state-remaining-tour-length state) cv rem-tour-len)
-									  :remaining-capacity 	 	  (change-array-copy (state-remaining-capacity state)    cv rem-capacity))
-						  generated-states))
+					(cons (let ((new-state (copy-full-state state)))
+								(insert-customer-on-path state customer-id cv (- (length (get-vehicle-route state cv)) 2) added-length)
+						  new-state)
+					generated-states))
 				(format T "~%generated-states ~D~%" generated-states)
 				(break)
-				))))
+				)))
 	))
 
 (defun is-goal-state (state)
@@ -415,13 +407,11 @@
 	(let* ((index (third (state-inserted-pair state)))
 		   (route (get-vehicle-route state (first (state-inserted-pair state))))
 		   (i     (get-location (nth (1- index) route)))
-		   (k     (get-location (second (state-inserted-pair state)))) 
+		   (k     (get-location (second (state-inserted-pair state))))
 		   (j     (get-location (nth (1+ index) route)))
 		   (lamb 1))
 	(- (+ (distance i k) (distance k j)) (* lamb (distance i j)))))
 
-; The cost is calculated by adding the distance to get to this state from the previous and the diference to the maximum demand (it should have lower costs for customers with high demand)
-; NOTE @AndreSobral since distance is more important i gave it a factor of 1.5 -- if this remains it must be tweaked
 (defun cost-function (state)
 	"This function gives the cost of a state"
 	0)
