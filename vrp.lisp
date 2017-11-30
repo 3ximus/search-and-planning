@@ -349,7 +349,7 @@
 (defun customers-to-states (state customers-to-insert)
 	(let ((generated-states NIL)
 		  (cv (get-current-vehicle state)))
-	
+
 	(dolist (customer-id customers-to-insert generated-states)
 		(let* ((customer-location (get-location customer-id))
 			   (added-length (insertion-cost 0 (nth (- (length (get-vehicle-route state cv)) 2) (get-vehicle-route state cv)) customer-id))
@@ -360,7 +360,7 @@
 					(cons (let ((new-state (copy-full-state state)))
 								(insert-customer-on-path new-state customer-id cv (- (length (get-vehicle-route state cv)) 1) added-length)
 						  new-state)
-					generated-states))	
+					generated-states))
 			)))
 	))
 

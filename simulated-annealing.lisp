@@ -145,8 +145,8 @@
 ;; -----------------------------
 
 ; Good values for this ALPHA range from 0.8 to 0.99 (higher ALPHA => cools slower)
-(defconstant ALPHA 0.97) ; used for exponential-multiplicative cooling
-(defconstant INITIAL_TEMP 100) ; used for exponential-multiplicative cooling
+(defconstant ALPHA 0.97)
+(defconstant INITIAL_TEMP 500)
 
 (defun exponential-multiplicative-cooling (delta-t &optional (initial-temp INITIAL_TEMP))
 	"Cooling scheduler Tk = T0 * a^k"
@@ -166,10 +166,11 @@
 
 ;; -----------------------------
 
+(defconstant STOP_CONSTANT 0.01)
+
 (defun simulated-annealing (problem)
 	(let ((current (problem-initial-state problem))
-		  (time-value 0)
-		  (successors nil))
+		  (time-value 0) (successors nil) (prev-temp most-positive-fixnum))
 		(loop while (and (incf time-value)
 						 (setf successors (funcall (problem-neighbor problem) current))
 						 (incf *nos-expandidos*)
@@ -177,7 +178,9 @@
 			(let* ((temp (funcall (problem-schedule problem) time-value))
 				  (next (get-random-element successors))
 				  (delta-worse (- (funcall (problem-state-value problem) next) (funcall (problem-state-value problem) current))))
-				(when (equalp temp 0) (return-from simulated-annealing current))
+				(when (< (- prev-temp temp) STOP_CONSTANT) (return-from simulated-annealing current))
+				(setf prev-temp temp)
+				(print temp)
 				(when (or (<= delta-worse 0) (and (> delta-worse 0) (check-probability delta-worse temp)))
 					(setf current next))))
 	current))

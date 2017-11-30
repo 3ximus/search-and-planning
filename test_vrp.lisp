@@ -60,8 +60,7 @@
 
 ;(write (sweep *vrp-prob*))
 
-;(setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
-
+(write (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
 
 ; (write (Mole-Jameson-Seq-Insert-Heuristic (create-initial-state *vrp-prob*)))
 ; (break)
@@ -81,11 +80,8 @@
 ; (setf new-state (first (gen-successors-with-clustering new-state)))
 
 ; (trace Mole-Jameson-Seq-Insert-Heuristic)
-(defvar result)
-(write (vrp *vrp-prob* "a*.best.alternative.heuristic"))
+;(write (vrp *vrp-prob* "a*.best.alternative.heuristic"))
 
 ; (write (state-vehicle-routes (car (last (first result)))))
 
 
-; ===================================
-;(log-state result)
