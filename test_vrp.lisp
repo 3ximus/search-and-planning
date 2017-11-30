@@ -61,8 +61,7 @@
 ;(write (sweep *vrp-prob*))
 
 (setf result (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
-;(write result)
-
+(write result)
 
 ; ===================================
 ;(log-state result)

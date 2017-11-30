@@ -52,6 +52,9 @@
 (defun get-current-vehicle (state)
 	(state-current-vehicle state))
 
+(defun key-list (some-hash)
+	(loop for key being the hash-keys of some-hash collect key))
+
 (defun get-unvisited-customer-ids (state)
 	(loop for key being the hash-keys of (state-unvisited-locations state) collect key))
 
@@ -167,31 +170,21 @@
 		(setf (aref new-arr pos) new-val)
 	new-arr))
 
-(defun invalid-vehicle (state vehicle)
-	(or (>= vehicle (length (state-vehicle-routes state))) (< vehicle 0)))
-
-(defun invalid-index (vehicle-route index)
-	(or (> index (length vehicle-route)) (< index 0)))
-
 (defun insert-customer-on-path (state id vehicle index added-length)
-	"Insert a customer ID in given vehicle path at specific index, added-length should contain how much the route will be increased"
-	(if (invalid-vehicle state vehicle)
-		(error "~S is not a valid vehicle-id." vehicle)
-		(let ((vehicle-route (get-vehicle-route state vehicle)))
-			(if (invalid-index vehicle-route index)
-				(error "Index out-of-range [input: ~D, Maxlength: ~D] in vehicle-route of vehicle ~D." index (length vehicle-route) vehicle)
-				(progn
-					(if (= index 0) ; push normal
-						(push id vehicle-route)
-						(push id (cdr (nthcdr (1- index) vehicle-route))))
-					; update the state accordingly
-					(set-vehicle-route state vehicle-route vehicle)
-					(set-remaining-capacity state (- (get-remaining-capacity state vehicle) (get-demand id)) vehicle)
-					(set-remaining-length state (- (get-remaining-length state vehicle) added-length) vehicle)
-					(setf (state-transition-cost state) added-length)
-					(setf (state-inserted-pair state) (list vehicle id))
-					(setf (state-unvisited-locations state) (remove-location state id))
-					(setf (state-number-unvisited-locations state) (1- (state-number-unvisited-locations state))))))))
+	"Insert a customer ID in given vehicle path at specific index, added-length should contain how much the route will be increased,
+	NOTE THIS CHANGES THE GIVEN STATE"
+	(let ((vehicle-route (get-vehicle-route state vehicle)))
+	(if (= index 0) ; push normal
+		(push id vehicle-route)
+		(push id (cdr (nthcdr (1- index) vehicle-route))))
+	; update the state accordingly
+	(set-vehicle-route state vehicle-route vehicle)
+	(set-remaining-capacity state (- (get-remaining-capacity state vehicle) (get-demand id)) vehicle)
+	(set-remaining-length state (- (get-remaining-length state vehicle) added-length) vehicle)
+	(setf (state-transition-cost state) added-length)
+	(setf (state-inserted-pair state) (list vehicle id))
+	(setf (state-unvisited-locations state) (remove-location state id))
+	(setf (state-number-unvisited-locations state) (1- (state-number-unvisited-locations state)))))
 
 (defun insertion-cost (a b c)
 	"Calculate cost in terms of aditional length when inserting c between a and b, Cost = c[a-c] + c[b-c] - c[a-b]

@@ -10,15 +10,15 @@
 
 (defstruct problem
 	initial-state
-	gen-successors
+	neighbor
 	state-value ; evaluate a state to determine how good it is
 	schedule ; cooling schedule function
 	initial-schedule-value) ; initial value for the scheduling function
 
-(defun create-problem-simulated-annealing (initial-state gen-successors
+(defun create-problem-simulated-annealing (initial-state neighbor
 											&key state-value schedule initial-schedule-value)
 	(make-problem :initial-state initial-state
-				  :gen-successors gen-successors
+				  :neighbor neighbor
 				  :state-value state-value
 				  :schedule schedule
 				  :initial-schedule-value initial-schedule-value))
@@ -31,23 +31,12 @@
 	"Returns true with probability e^ΔE/T"
 	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
-(defun are-clockwise (v1 v2)
-	(>  (+ (* (- (car v1)) (cadr v2)) (* (cadr v1) (car v2))) 0))
-
-(defun is-inside-sector (vehicle id)
-	"Each vehicle has its own sector therefore this returns if id belongs to that sector"
-	(let ((sector-start (op-2d #'- (aref *equal-slice-sectors* vehicle) (get-depot-location)))
-			(sector-end (op-2d #'- (aref *equal-slice-sectors* (mod (1+ vehicle) (vrp-vehicles.number *vrp-data*))) (get-depot-location)))
-			(customer-location (op-2d #'- (get-location id) (get-depot-location))))
-		(and (are-clockwise sector-end customer-location) (not (are-clockwise sector-start customer-location)))))
-
 (defun assess-path-insertions (id path remaining-length remaining-capacity &key (index 1))
 	"Verify all insertions in path and returns the best one, takes remaining length and capacity into account"
 	(when (equalp path '(0)) (return-from assess-path-insertions (values most-positive-fixnum nil))) ; returns largest number possible
 	(let ((cost (insertion-cost (car path) (cadr path) id)))
 		(multiple-value-bind (rest-cost rest-index) (assess-path-insertions id (cdr path) remaining-length remaining-capacity :index (1+ index))
 			; verify remaining length and capacity, if not enough return large cost so it doesn't get selected
-			;(format t "~F[~D] . ~F[~D]  | L ~D C ~D~%" cost index rest-cost rest-index remaining-length remaining-capacity)
  			(when (or (> (get-demand id) remaining-capacity) (< remaining-length cost))
 				(if (null rest-index) ; if a valid solution hasn't been found
 					(return-from assess-path-insertions (values most-positive-fixnum nil))) ; then still wont be it
@@ -75,8 +64,62 @@
 		(do-sector-insertion zero-state cid))
 	(return-from initial-solution zero-state))
 
+(defun delete-position (n list)
+	"Delete element at position - destructive!"
+	(if (zerop n) (cdr list)
+		(let ((cons (nthcdr (1- n) list)))
+			(when cons (setf (cdr cons) (cddr cons))) list)))
+
+(defun shift (state v1 i1 v2)
+	"Shift position i1 from v1 path to v2 path
+	NOTE THIS CHANGES THE GIVEN STATE"
+	(let ((p1 (get-vehicle-route state v1))
+			(p2 (get-vehicle-route state v2)))
+		(setf tmp (nth i1 p1))
+		(multiple-value-bind (cost index) (assess-path-insertions tmp p2 (get-remaining-length state v2) (get-remaining-capacity state v2))
+			(when (< (get-remaining-length state v2) cost) (return-from shift nil))
+			(insert-customer-on-path state tmp v2 index cost)
+			(delete-position i1 p1))))
+
+(defun interchange (state v1 i1 v2 i2)
+	"Interchange 2 positions (i1 i2) in 2 vehicle (v1 v2) paths,
+	NOTE THIS CHANGES THE GIVEN STATE"
+	(let ((p1 (get-vehicle-route state v1))
+			(p2 (get-vehicle-route state v2)))
+		(let ((ni1 (nth i1 p1)) (ni2 (nth i2 p2))
+				(p1a (nth (1- i1) p1)) (p1b (nth (1+ i1) p1))
+				(p2a (nth (1- i2) p2)) (p2b (nth (1+ i2) p2)))
+		(let ((added-length-v1 (- (insertion-cost p1a p1b ni2) (insertion-cost p1a p1b ni1)))
+				(added-length-v2 (- (insertion-cost p2a p2b ni1) (insertion-cost p2a p2b ni2)))
+				(added-capacity-v1 (- (get-demand ni2) (get-demand ni1)))
+				(added-capacity-v2 (- (get-demand ni1) (get-demand ni2))))
+		(break )
+		(when (or (> added-capacity-v1 (get-remaining-capacity state v1)) (> added-capacity-v2 (get-remaining-capacity state v2))
+				  (> added-length-v1 (get-remaining-length state v1)) (> added-length-v2 (get-remaining-length state v2)))
+			(return-from interchange nil)) ; then
+		(setf (nth i1 p1) (nth i2 p2))
+		(setf (nth i2 p2) ni1)
+		(set-remaining-capacity state (- (get-remaining-capacity state v1) added-capacity-v1) v1)
+		(set-remaining-capacity state (- (get-remaining-capacity state v2) added-capacity-v2) v2)
+		(set-remaining-length state (- (get-remaining-length state v1) added-length-v1) v1)
+		(set-remaining-length state (- (get-remaining-length state v2) added-length-v2) v2)))))
+
+(defun shift-process ())
+
+(defun interchange-process (state)
+	"Returns all neighbors by means of interchange with other adjacent vehicle paths, exchanging a costumer in the route with another from other route"
+	)
+
+(defun closest-interchange-process (state)
+	"Returns all neighbors by means of interchange with any other vehicle route that has points adjacent to a given vehicle"
+	)
+
 (defun neighbor-states (state)
 	"Get all neighbor states"
+	(let ((nstates nil)))
+	(dotimes (i (vrp-vehicles.number *vrp-data*))
+	)
+
 	(log-state state)
 	(break )
 	nil)
@@ -114,7 +157,7 @@
 		  (time-value 0)
 		  (successors nil))
 		(loop while (and (incf time-value)
-						 (setf successors (funcall (problem-gen-successors problem) current))
+						 (setf successors (funcall (problem-neighbor problem) current))
 						 (incf *nos-expandidos*)
 						 (incf *nos-gerados* (length successors))) do
 			(let* ((temp (funcall (problem-schedule problem) time-value :initial-temp (problem-initial-schedule-value problem)))
