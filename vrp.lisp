@@ -313,10 +313,10 @@
 
 (defun gen-successors-with-clustering (state)
 	
-	(let ((cv 				  (get-current-vehicle state))
-		  (vehicle-cluster    (aref *sweep-sectors* cv))
-		  (inserted-locations (butlast (rest (aref (state-vehicle-routes state) cv))))
-		  (locations-to-insert NIL))
+	(let* ((cv 				  (get-current-vehicle state))
+		   (vehicle-cluster    (aref *sweep-sectors* cv))
+		   (inserted-locations (butlast (rest (aref (state-vehicle-routes state) cv))))
+		   (locations-to-insert NIL))
 
 	(if (= (length vehicle-cluster) (length inserted-locations)) ;; ja inserio todas as posicoes para aquele veiculo
 		(progn
@@ -336,6 +336,9 @@
 		(setf locations-to-insert vehicle-cluster)
 		(dotimes (i (length inserted-locations))
 			(setf locations-to-insert (remove (nth i inserted-locations) vehicle-cluster))))
+
+	(format T "locations-to-insert: ~D~%" locations-to-insert)
+	(break)
 
 	(locations-to-states state locations-to-insert))
 )
