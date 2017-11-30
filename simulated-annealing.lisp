@@ -179,8 +179,5 @@
 				  (delta-worse (- (funcall (problem-state-value problem) next) (funcall (problem-state-value problem) current))))
 				(when (equalp temp 0) (return-from simulated-annealing current))
 				(when (or (<= delta-worse 0) (and (> delta-worse 0) (check-probability delta-worse temp)))
-					(setf current next))
-				;(format t "~D  .. ~D xx  ~D~% " temp (state-value current) delta-worse)  ; PLACEHOLDER
-				(log-state current)
-				))
+					(setf current next))))
 	current))

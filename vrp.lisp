@@ -227,7 +227,7 @@
 		:remaining-capacity
 			(make-array (vrp-vehicles.number problem) :initial-contents (make-list (vrp-vehicles.number problem) :initial-element (vrp-vehicle.capacity problem)))))
 
-(defun gen-successors (state) ; TODO make a copy of the state and change its values with the setter functions
+(defun gen-successors (state)
 	"Generates the successor states of a given state"
 	(let ((cv (get-current-vehicle state))
 		  (cv-location NIL)
@@ -290,8 +290,6 @@
 (defun gen-successors-insertion-method (state)
 	"Generate successors states by adding each location to each vehicle path in each possible position
 	NOTE this functions assumes each vehicle route starts with (list 0 0), so make sure its created that way"
-	(log-state state) ; PLACEHOLDER
-	(print *nos-expandidos*)
 	(let ((gstates NIL))
 	(dolist (id (get-unvisited-customer-ids state))
 		(dotimes (vehicle (usable-vehicles state))
@@ -308,7 +306,6 @@
 		(incf cv) (setf (state-current-vehicle state) cv) ; update cv on the state
 		(dolist (id (get-unvisited-customer-ids state))
 			(setf gstates (nconc gstates (gen-vehicle-states id cv (get-vehicle-route state cv) state)))))
-	(log-state state) ; PLACEHOLDER
 	gstates))
 
 (defun gen-successors-with-clustering (state)
@@ -393,11 +390,10 @@
 	"Returns the size of the arc from point to vector"
 	(* (distance (get-depot-location) point) (get-angle point vector)))
 
-(defun heuristic (state)
+(defun heuristic (state) ; NOTE really bad
 	(when (null (state-inserted-pair state)) (return-from heuristic 0))
 	(let ((slice-vector (aref *equal-slice-sectors* (car (state-inserted-pair state)))))
 	(get-arc-distance (get-location (cadr (state-inserted-pair state))) slice-vector)))
-	; TODO add the average of traveled distance here to favor longer paths
 
 (defun alternative-heuristic (state)
 	(Mole-Jameson-Seq-Insert-Heuristic state))
@@ -464,10 +460,7 @@
 	(let ((solucao (faz-a-procura problema tipo-procura
 				profundidade-maxima
 				espaco-em-arvore?)))
-(list solucao
-			(- (get-internal-run-time ) tempo-inicio)
-			*nos-expandidos*
-			*nos-gerados*)))))
+(state-vehicle-routes solucao)))))
 
 ;; -----------------------------
 ;; OTHER FUNCTIONS
