@@ -20,16 +20,11 @@
 	(make-problem :initial-state initial-state
 				  :neighbor neighbor
 				  :state-value state-value
-				  :schedule schedule
-				  :initial-schedule-value initial-schedule-value))
+				  :schedule schedule))
 
 (defun get-random-element (some-list)
 	"Get a random element from a list"
 	(nth (random (length some-list)) some-list))
-
-(defun check-probability (delta-worse temp)
-	"Returns true with probability e^ΔE/T"
-	(<= (/ (random 100) 100) (exp (/ delta-worse temp))))
 
 (defun assess-path-insertions (id path remaining-length remaining-capacity &key (index 1))
 	"Verify all insertions in path and returns the best one, takes remaining length and capacity into account"
@@ -105,31 +100,34 @@
 		(set-remaining-length state (- (get-remaining-length state v2) added-length-v2) v2)))
 	T))
 
-(defun shift-process ())
+(defun shift-process (state vehicle)
+	"Returns all neighbors by means of a shift, taking a customer from another vehicle path"
+	(let ((states NIL))
+	(dotimes (vb (vrp-vehicles.number *vrp-data*))
+		(when (not (equalp vb vehicle))
+			(loop for i from 1 to (- (length (get-vehicle-route state vb)) 2) do
+				(let ((new-state (copy-full-state state)))
+				(when (shift new-state vb i vehicle)
+					(setf states (cons new-state states)))))))
+	states))
 
 (defun interchange-process (state vehicle)
 	"Returns all neighbors by means of interchange with other adjacent vehicle paths, exchanging a costumer in the route with another from other route"
-	(let ((path (get-vehicle-route state vehicle)) (states NIL)
-			(vb (mod (1- vehicle) (vrp-vehicles.number *vrp-data*))) ; vehicle after
-			(va (mod (1+ vehicle) (vrp-vehicles.number *vrp-data*)))) ; vehicle before
-	(loop for k from 1 to (- (length path) 2) do
-		(loop for i from 1 to (- (length (get-vehicle-route state vb)) 2) do
-			(let ((new-state (copy-full-state state)))
-				(when (interchange new-state vb i vehicle k)
-					(setf states (cons new-state states)))))
-		(loop for j from 1 to (- (length (get-vehicle-route state va)) 2) do
-			(let ((new-state (copy-full-state state)))
-				(when (interchange new-state va j vehicle k)
-					(setf states (cons new-state states))))))
+	(let ((path (get-vehicle-route state vehicle)) (states NIL))
+	(dotimes (vb (vrp-vehicles.number *vrp-data*))
+		(when (not (equalp vb vehicle))
+			(loop for k from 1 to (- (length path) 2) do
+				(loop for i from 1 to (- (length (get-vehicle-route state vb)) 2) do
+					(let ((new-state (copy-full-state state)))
+					(when (interchange new-state vb i vehicle k)
+						(setf states (cons new-state states))))))))
 	states))
-
-(defun closest-interchange-process (state)
-	"Returns all neighbors by means of interchange with any other vehicle route that has points adjacent to a given vehicle"
-	)
 
 (defun neighbor-states (state)
 	"Get all neighbor states"
 	(let ((nstates NIL))
+	(dotimes (i (vrp-vehicles.number *vrp-data*))
+		(setf nstates (nconc nstates (shift-process state i))))
 	(dotimes (i (vrp-vehicles.number *vrp-data*))
 		(setf nstates (nconc nstates (interchange-process state i))))
 	nstates))
@@ -150,15 +148,21 @@
 (defconstant ALPHA 0.97) ; used for exponential-multiplicative cooling
 (defconstant INITIAL_TEMP 100) ; used for exponential-multiplicative cooling
 
-(defun exponential-multiplicative-cooling (delta-t &key initial-temp)
+(defun exponential-multiplicative-cooling (delta-t &optional (initial-temp INITIAL_TEMP))
 	"Cooling scheduler Tk = T0 * a^k"
 	(if (null initial-temp) (setf initial-temp INITIAL_TEMP))
 	(* initial-temp (expt ALPHA delta-t)))
 
 
-(defun logarithmic-multiplicative-cooling (delta-t &key initial-temp)
+(defun logarithmic-multiplicative-cooling (delta-t &optional (initial-temp INITIAL_TEMP))
 	"Cooling scheduler  = T0 / ( 1+ a * log(1 + k) )"
 	0)
+
+; Probability check
+
+(defun check-probability (delta-worse temp)
+	"Returns true with probability e^ΔE/T"
+	(> (exp (/ (- delta-worse) temp)) (/ (random 100) 100)))
 
 ;; -----------------------------
 
@@ -170,17 +174,10 @@
 						 (setf successors (funcall (problem-neighbor problem) current))
 						 (incf *nos-expandidos*)
 						 (incf *nos-gerados* (length successors))) do
-			(let* ((temp (funcall (problem-schedule problem) time-value :initial-temp (problem-initial-schedule-value problem)))
+			(let* ((temp (funcall (problem-schedule problem) time-value))
 				  (next (get-random-element successors))
-				  (delta-worse (- (funcall (problem-state-value problem) current) (funcall (problem-state-value problem) next))))
-				(if (equalp temp 0)
-					(return-from simulated-annealing current))
-				(if (< delta-worse 0)
-					(setf current next)
-					(if (check-probability delta-worse temp)
-						(setf current next)))
-				;(format t "~D  .. ~D xx  ~D~% " temp (state-value current) delta-worse)  ; PLACEHOLDER
-				(log-state current)
-				(break )
-				))
+				  (delta-worse (- (funcall (problem-state-value problem) next) (funcall (problem-state-value problem) current))))
+				(when (equalp temp 0) (return-from simulated-annealing current))
+				(when (or (<= delta-worse 0) (and (> delta-worse 0) (check-probability delta-worse temp)))
+					(setf current next))))
 	current))
