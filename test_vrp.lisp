@@ -1,7 +1,8 @@
 ;;; Run a few tests
 
-(load "vrp")
-(load "sweep")
+;(load "vrp")
+;(load "sweep")
+(load "G002")
 
 (setf *vrp-prob* (make-vrp  :name "CMT1"
 							:vehicle.capacity 160
@@ -32,54 +33,8 @@
 												(45 10) (46 5) (47 25) (48 17) (49 18) (50 10))))
 
 
-;(setf *customerHash* (makeCustomerHash (vrp-customer.locations *vrp-prob*) (vrp-customer.demand *vrp-prob*)))
-;(format T "id: ~X location: ~X demand: ~D~%" 3 (getCustomerLocation *customerHash* 3) (getCustomerDemand *customerHash* 3))
-
-; Testing create init state
-;(trace create-initial-state)
-;(untrace gen-successors)
-;(trace gen-successors)
-;(trace cost-function)
-;(write (vrp *vrp-prob* "a*.best.heuristic"))
-
-; ===================================
-; Iterative sampling Testing
-
-;(iterative-sampling (create-initial-state *vrp-prob*) :gen-successors #'gen-successors :max-sol-number 100)
-;(iterative-sampling (create-initial-state *vrp-prob*) :gen-successors #'gen-successors)
-;(iterative-sampling (create-initial-state *vrp-prob* (list 0 0)) :gen-successors #'gen-successors-insertion-method)
-; ===================================
-
-
-;(trace exponential-multiplicative-cooling)
-;(trace initial-solution)
-;(trace gen-successors-insertion-method)
-;(trace get-arc-distance)
-;(trace gen-successors-insertion-method)
-;(setf result (vrp *vrp-prob* "a*.best.heuristic"))
-
-;(write (sweep *vrp-prob*))
-
-(write (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
-
-; (write (Mole-Jameson-Seq-Insert-Heuristic (create-initial-state *vrp-prob*)))
-; (break)
-
-
-; (defvar *new-state*)
-
-; (setf new-state (first (gen-successors-with-clustering (create-initial-state *vrp-prob* (list 0 0)))))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-; (setf new-state (first (gen-successors-with-clustering new-state)))
-
-; (trace Mole-Jameson-Seq-Insert-Heuristic)
+;(write (vrp *vrp-prob* "simulated.annealing.or.genetic.algoritm"))
+(write (vrp *vrp-prob* "best.approach"))
 ;(write (vrp *vrp-prob* "a*.best.alternative.heuristic"))
 
 ; (write (state-vehicle-routes (car (last (first result)))))

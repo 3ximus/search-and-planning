@@ -143,20 +143,18 @@
 ;; -----------------------------
 ;; COOLING SCHEDULES
 ;; -----------------------------
+(defconstant INITIAL_TEMP 400)
 
 ; Good values for this ALPHA range from 0.8 to 0.99 (higher ALPHA => cools slower)
-(defconstant ALPHA 0.97)
-(defconstant INITIAL_TEMP 500)
-
+(defconstant ALPHA_EXP 0.97) ; used in exponential-multiplicative-cooling
 (defun exponential-multiplicative-cooling (delta-t &optional (initial-temp INITIAL_TEMP))
 	"Cooling scheduler Tk = T0 * a^k"
-	(if (null initial-temp) (setf initial-temp INITIAL_TEMP))
-	(* initial-temp (expt ALPHA delta-t)))
+	(* initial-temp (expt ALPHA_EXP delta-t)))
 
-
+(defconstant ALPHA_LOG 3) ; used in logarithmic-multiplicative-cooling
 (defun logarithmic-multiplicative-cooling (delta-t &optional (initial-temp INITIAL_TEMP))
 	"Cooling scheduler  = T0 / ( 1+ a * log(1 + k) )"
-	0)
+	(/ initial-temp (1+ (* ALPHA_LOG (log (1+ delta-t))))))
 
 ; Probability check
 
@@ -180,7 +178,6 @@
 				  (delta-worse (- (funcall (problem-state-value problem) next) (funcall (problem-state-value problem) current))))
 				(when (< (- prev-temp temp) STOP_CONSTANT) (return-from simulated-annealing current))
 				(setf prev-temp temp)
-				(print temp)
 				(when (or (<= delta-worse 0) (and (> delta-worse 0) (check-probability delta-worse temp)))
 					(setf current next))))
 	current))
